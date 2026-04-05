@@ -15,7 +15,7 @@ Bottom status: total, keep, reject, review counts and AI review usage.
 Keep typography clean, dense, professional, minimal clutter.
 
 Prompt B (내보내기 설정 모달)
-Create a modal dialog for Photo Culler export options in IBM Carbon dark theme.
+Create a modal dialog for ktk.select export options in IBM Carbon dark theme.
 Sections:
 1) Export mode: copy / move / metadata-only / hardlink.
 2) Folder mapping: keep, reject, review destination paths.
@@ -24,6 +24,6 @@ Sections:
 Primary CTA: "Export" secondary: "Save preset".
 
 Prompt C (초보자 온보딩)
-Create a 3-step onboarding wizard for Photo Culler (Carbon dark):
+Create a 3-step onboarding wizard for ktk.select (Carbon dark):
 Step1 import, Step2 set rule strengths, Step3 export mode.
 Use concise Korean labels and helper text for beginners.

@@ -9,7 +9,7 @@ param(
 )
 
 python -m pip install -r requirements.txt
-python -m photo_culler.cli run `
+python -m ktk_select.cli run `
   --input "$InputDir" `
   --output "$OutputDir" `
   --eyes-level "$EyesLevel" `

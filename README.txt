@@ -13,25 +13,25 @@ ktk.select CLI (MVP)
 
 실행 예시
 - 기본 실행
-  python -m photo_culler.cli run --input ./photos --output ./out
+  python -m ktk_select.cli run --input ./photos --output ./out
 
 - 항목별 강도 (0=off, 1=하, 2=중, 3=상)
-  python -m photo_culler.cli run --input ./photos --output ./out \
+  python -m ktk_select.cli run --input ./photos --output ./out \
     --eyes-level 2 --focus-level 2 --blur-level 1 --exposure-level 1 --duplicate-level 0
 
 - 공격적 제외
-  python -m photo_culler.cli run --input ./photos --output ./out \
+  python -m ktk_select.cli run --input ./photos --output ./out \
     --eyes-level 3 --focus-level 3 --blur-level 3 --exposure-level 3 --duplicate-level 3
 
 - AI 옵션(Codex auth/API 키)
-  python -m photo_culler.cli run --input ./photos --output ./out \
+  python -m ktk_select.cli run --input ./photos --output ./out \
     --ai-mode smart --api-provider codex --ai-model gpt-4.1-mini --max-ai-calls 300
 
 - 파일 이동 없이 리포트만
-  python -m photo_culler.cli run --input ./photos --output ./out --dry-run
+  python -m ktk_select.cli run --input ./photos --output ./out --dry-run
 
 - 단일 파일 설명
-  python -m photo_culler.cli explain --file ./photos/IMG_0001.JPG --eyes-level 2 --focus-level 2
+  python -m ktk_select.cli explain --file ./photos/IMG_0001.JPG --eyes-level 2 --focus-level 2
 
 출력물
 - output/result.csv
