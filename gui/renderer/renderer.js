@@ -10,8 +10,10 @@ for (const id of ids) {
   })
 }
 
-const PRESET_KEY = 'ktk.select.presets.v1'
-const RECENT_KEY = 'ktk.select.recent.v1'
+const PRESET_KEY = 'photoforge.presets.v1'
+const RECENT_KEY = 'photoforge.recent.v1'
+const LEGACY_PRESET_KEY = 'ktk.select.presets.v1'
+const LEGACY_RECENT_KEY = 'ktk.select.recent.v1'
 let modalItems = []
 
 const defaultPresets = {
@@ -22,7 +24,8 @@ const defaultPresets = {
 
 function loadPresets() {
   try {
-    const v = JSON.parse(localStorage.getItem(PRESET_KEY) || '{}')
+    const raw = localStorage.getItem(PRESET_KEY) || localStorage.getItem(LEGACY_PRESET_KEY) || '{}'
+    const v = JSON.parse(raw)
     return { ...defaultPresets, ...v }
   } catch {
     return { ...defaultPresets }
@@ -73,7 +76,8 @@ function persistRecent() {
 
 function restoreRecent() {
   try {
-    const v = JSON.parse(localStorage.getItem(RECENT_KEY) || '{}')
+    const raw = localStorage.getItem(RECENT_KEY) || localStorage.getItem(LEGACY_RECENT_KEY) || '{}'
+    const v = JSON.parse(raw)
     if (v.inputDir) $('inputDir').value = v.inputDir
     if (v.outputDir) $('outputDir').value = v.outputDir
     if (v.conflictPolicy) $('conflictPolicy').value = v.conflictPolicy

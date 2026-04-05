@@ -1,4 +1,4 @@
-ktk.select CLI (MVP)
+Photo Forge CLI (MVP)
 
 목표
 - 대량 인물 사진에서 품질이 낮은 컷을 자동 분류(keep/reject/review)

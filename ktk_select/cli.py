@@ -489,7 +489,7 @@ def add_rule_level_args(parser):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="ktk.select", description="ktk.select 사진 자동 셀렉 CLI")
+    parser = argparse.ArgumentParser(prog="photo-forge", description="Photo Forge 사진 대량작업 CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="폴더 단위 자동 분류")

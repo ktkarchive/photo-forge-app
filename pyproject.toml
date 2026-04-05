@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ktk-select"
+name = "photo-forge"
 version = "0.1.0"
-description = "ktk.select photo auto culling CLI for macOS/Windows"
+description = "Photo Forge batch photo workflow CLI for macOS/Windows"
 readme = "README.txt"
 requires-python = ">=3.10"
 dependencies = [
@@ -16,6 +16,8 @@ dependencies = [
 ]
 
 [project.scripts]
+photo-forge = "ktk_select.cli:main"
+photoforge = "ktk_select.cli:main"
 ktk-select = "ktk_select.cli:main"
 ktk.select = "ktk_select.cli:main"
 

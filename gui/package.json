@@ -1,8 +1,8 @@
 {
-  "name": "ktk-select-gui",
+  "name": "photo-forge-gui",
   "version": "0.1.0-beta1",
   "private": true,
-  "description": "ktk.select macOS GUI (Stitch-guided Carbon Dark)",
+  "description": "Photo Forge macOS GUI (Stitch-guided Carbon Dark)",
   "main": "main.cjs",
   "scripts": {
     "prepare:embedded": "bash scripts/prepare-embedded.sh",
@@ -15,8 +15,8 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.ktk.select.gui",
-    "productName": "ktk.select",
+    "appId": "com.ktk.photoforge.gui",
+    "productName": "Photo Forge",
     "directories": {
       "output": "release"
     },
@@ -34,7 +34,7 @@
       "target": [
         "dmg"
       ],
-      "artifactName": "ktk.select-gui-${version}-${arch}.${ext}",
+      "artifactName": "Photo-Forge-${version}-${arch}.${ext}",
       "category": "public.app-category.photography",
       "hardenedRuntime": false,
       "gatekeeperAssess": false

@@ -1,4 +1,4 @@
-ktk.select macOS GUI (Electron)
+Photo Forge macOS GUI (Electron)
 
 실행(개발)
 1) cd /Users/teykim/workspace_for_agent/ktk-select/gui
@@ -9,7 +9,7 @@ DMG 빌드(Unsigned)
 1) cd /Users/teykim/workspace_for_agent/ktk-select/gui
 2) npm install
 3) npm run pack:mac:unsigned
-4) 산출물: gui/release/ktk.select-gui-<version>-<arch>.dmg
+4) 산출물: gui/release/Photo-Forge-<version>-<arch>.dmg
 
 UI/UX 원칙
 - Stitch-guided + IBM Carbon Dark 톤

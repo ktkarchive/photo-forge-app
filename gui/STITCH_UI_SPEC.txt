@@ -1,4 +1,4 @@
-ktk.select GUI Stitch MCP Guided Spec
+Photo Forge GUI Stitch MCP Guided Spec
 
 - Theme: IBM Carbon Dark tone (#161616 background, subtle gray panels)
 - Layout: simple human-first (single main workspace, short mouse travel)
@@ -8,4 +8,4 @@ ktk.select GUI Stitch MCP Guided Spec
 - Feedback: clear progress + summary counts (total/keep/reject/review)
 
 Stitch prompt seed:
-"Design a macOS desktop photo culling UI for ktk.select. Use IBM Carbon dark style, simple one-column task flow, strong contrast, minimal controls, and clear action hierarchy for non-programmer users."
+"Design a macOS desktop photo workflow UI for Photo Forge. Use IBM Carbon dark style, simple one-column task flow, strong contrast, minimal controls, and clear action hierarchy for non-programmer users."

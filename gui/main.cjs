@@ -42,7 +42,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    title: 'ktk.select',
+    title: 'Photo Forge',
   })
 
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'))

@@ -6,9 +6,9 @@ VERSION="${1:-0.1.0-beta1}"
 ARCH="$(uname -m)"
 REL_DIR="$ROOT_DIR/release"
 STAGE_ROOT="$REL_DIR/stage"
-APP_DIR="$STAGE_ROOT/ktk.select"
-PAYLOAD_TGZ="$APP_DIR/ktk-select-src.tar.gz"
-DMG_PATH="$REL_DIR/ktk.select-${VERSION}-macos-${ARCH}.dmg"
+APP_DIR="$STAGE_ROOT/Photo Forge"
+PAYLOAD_TGZ="$APP_DIR/photo-forge-src.tar.gz"
+DMG_PATH="$REL_DIR/Photo-Forge-${VERSION}-macos-${ARCH}.dmg"
 
 rm -rf "$STAGE_ROOT"
 mkdir -p "$APP_DIR"
@@ -29,7 +29,7 @@ set -euo pipefail
 BASE="$HOME/.ktk-select"
 APP="$BASE/app"
 VENV="$BASE/venv"
-SRC_TGZ="$(cd "$(dirname "$0")" && pwd)/ktk-select-src.tar.gz"
+SRC_TGZ="$(cd "$(dirname "$0")" && pwd)/photo-forge-src.tar.gz"
 
 mkdir -p "$BASE"
 rm -rf "$APP"
@@ -69,7 +69,7 @@ python -m ktk_select.cli "$@"
 EOF
 
 cat > "$APP_DIR/README.txt" <<EOF
-ktk.select macOS CLI 배포 패키지 (${VERSION})
+Photo Forge macOS CLI 배포 패키지 (${VERSION})
 
 1) install.command 더블클릭 (최초 1회)
 2) run.command 더블클릭 또는 터미널에서 CLI 실행
@@ -85,7 +85,7 @@ EOF
 chmod +x "$APP_DIR/install.command" "$APP_DIR/run.command"
 
 hdiutil create \
-  -volname "ktk.select" \
+  -volname "Photo Forge" \
   -srcfolder "$STAGE_ROOT" \
   -ov \
   -format UDZO \
