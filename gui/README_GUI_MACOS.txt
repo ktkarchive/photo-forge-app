@@ -15,6 +15,6 @@ UI/UX 원칙
 - Stitch-guided + IBM Carbon Dark 톤
 - 단순 레이아웃(입력/출력/레벨/실행)
 - 마우스 동선 최소화
-- Export 모드 3종: report / copy / move
+- 분석 실행 시 report 분석 -> 검토 팝업(Approve/Reject 토글) -> 확인 시 실제 copy/move 적용
 - 충돌정책(rename/skip/overwrite), 프리셋 저장, 최근 설정 복원
-- 결과 검토 그리드(Reject/Review) + 재분류(overrides.json) 저장
+- Reject 이유 하이라이트: 눈감음/초점/흔들림/노출/중복/기타

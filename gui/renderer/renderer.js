@@ -12,8 +12,7 @@ for (const id of ids) {
 
 const PRESET_KEY = 'ktk.select.presets.v1'
 const RECENT_KEY = 'ktk.select.recent.v1'
-let currentRows = []
-const overrides = {}
+let modalItems = []
 
 const defaultPresets = {
   conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0 },
@@ -34,25 +33,6 @@ function savePresets(presets) {
   localStorage.setItem(PRESET_KEY, JSON.stringify(presets))
 }
 
-function getSettingFromUI() {
-  const exportMode = document.querySelector('input[name="exportMode"]:checked')?.value || 'copy'
-  return {
-    inputDir: $('inputDir').value.trim(),
-    outputDir: $('outputDir').value.trim(),
-    conflictPolicy: $('conflictPolicy').value,
-    exportMode,
-    levels: {
-      eyes_closed: Number($('eyes').value),
-      out_of_focus_subject: Number($('focus').value),
-      motion_blur: Number($('blur').value),
-      exposure_bad: Number($('exposure').value),
-      duplicate: Number($('dup').value),
-      occlusion: 0,
-      composition_bad: 0,
-    },
-  }
-}
-
 function applyLevelSet(levels) {
   const map = {
     eyes: levels.eyes ?? levels.eyes_closed ?? 2,
@@ -64,6 +44,24 @@ function applyLevelSet(levels) {
   for (const [k, v] of Object.entries(map)) {
     $(k).value = String(v)
     $(`${k}Val`).textContent = String(v)
+  }
+}
+
+function getSettingFromUI() {
+  return {
+    inputDir: $('inputDir').value.trim(),
+    outputDir: $('outputDir').value.trim(),
+    conflictPolicy: $('conflictPolicy').value,
+    exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
+    levels: {
+      eyes_closed: Number($('eyes').value),
+      out_of_focus_subject: Number($('focus').value),
+      motion_blur: Number($('blur').value),
+      exposure_bad: Number($('exposure').value),
+      duplicate: Number($('dup').value),
+      occlusion: 0,
+      composition_bad: 0,
+    },
   }
 }
 
@@ -85,50 +83,80 @@ function restoreRecent() {
   } catch {}
 }
 
-function classBadge(c) {
-  if (c === 'reject') return 'badge badge-reject'
-  if (c === 'review') return 'badge badge-review'
-  return 'badge badge-keep'
+function pickRejectBucket(rejectReasons) {
+  const t = String(rejectReasons || '')
+  if (t.includes('eyes_closed')) return '눈감음'
+  if (t.includes('out_of_focus_subject') || t.includes('focus_unavailable')) return '초점'
+  if (t.includes('motion_blur')) return '흔들림'
+  if (t.includes('exposure_bad')) return '노출'
+  if (t.includes('duplicate:')) return '중복'
+  return '기타'
 }
 
-function makeCard(row) {
+function reasonChips(rejectReasons) {
+  const all = ['눈감음', '초점', '흔들림', '노출', '중복', '기타']
+  const active = pickRejectBucket(rejectReasons)
+  return all
+    .map((x) => `<span class="chip ${x === active ? 'active' : ''}">${x}</span>`)
+    .join('')
+}
+
+function makeReviewCard(item) {
   const card = document.createElement('div')
   card.className = 'reviewCard'
 
-  const preview = document.createElement('img')
-  preview.src = `file://${row.file}`
-  preview.className = 'thumb'
-  preview.loading = 'lazy'
-  preview.onclick = () => window.ktk.openPath(row.file)
+  const img = document.createElement('img')
+  img.className = 'thumb'
+  img.src = `file://${item.file}`
+  img.loading = 'lazy'
+  img.onclick = () => window.ktk.openPath(item.file)
 
   const meta = document.createElement('div')
   meta.className = 'meta'
-  meta.innerHTML = `<span class="${classBadge(row.class)}">${row.class}</span><div class="filename">${row.file.split('/').pop()}</div><div class="reasons">${row.reject_reasons || row.review_reasons || '-'}</div>`
+  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="chips">${reasonChips(item.reject_reasons)}</div>`
 
-  const actions = document.createElement('div')
-  actions.className = 'smallActions'
-  ;['keep', 'review', 'reject'].forEach((klass) => {
-    const b = document.createElement('button')
-    b.textContent = klass
-    b.onclick = () => {
-      overrides[row.file] = klass
-      meta.querySelector('.badge').textContent = `${row.class} → ${klass}`
-    }
-    actions.appendChild(b)
-  })
+  const toggles = document.createElement('div')
+  toggles.className = 'smallActions'
+  const a = document.createElement('button')
+  const r = document.createElement('button')
+  a.textContent = 'approve'
+  r.textContent = 'reject'
 
-  card.appendChild(preview)
+  const applyUI = () => {
+    a.classList.toggle('sel', item.decision === 'approve')
+    r.classList.toggle('sel', item.decision === 'reject')
+  }
+
+  a.onclick = () => {
+    item.decision = 'approve'
+    applyUI()
+  }
+  r.onclick = () => {
+    item.decision = 'reject'
+    applyUI()
+  }
+  applyUI()
+
+  toggles.appendChild(a)
+  toggles.appendChild(r)
+
+  card.appendChild(img)
   card.appendChild(meta)
-  card.appendChild(actions)
+  card.appendChild(toggles)
   return card
 }
 
-function renderReview(rows) {
-  const grid = $('reviewGrid')
-  grid.innerHTML = ''
-  const target = rows.filter((r) => r.class === 'reject' || r.class === 'review')
-  $('reviewSummary').textContent = `${target.length}건`
-  target.forEach((r) => grid.appendChild(makeCard(r)))
+function openModal(items) {
+  modalItems = items
+  $('reviewGrid').innerHTML = ''
+  items.forEach((it) => $('reviewGrid').appendChild(makeReviewCard(it)))
+  const rejectCnt = items.filter((x) => x.decision === 'reject').length
+  $('modalSummary').textContent = `${items.length}건 (reject ${rejectCnt})`
+  $('reviewModal').classList.remove('hidden')
+}
+
+function closeModal() {
+  $('reviewModal').classList.add('hidden')
 }
 
 $('presetSelect').addEventListener('change', () => {
@@ -168,55 +196,61 @@ $('openOut').addEventListener('click', async () => {
   if (p) await window.ktk.openPath(p)
 })
 
-async function loadArtifactsAndRender() {
-  const out = $('outputDir').value.trim()
-  if (!out) return
-  const loaded = await window.ktk.loadRunArtifacts(out)
-  if (!loaded.ok) {
-    $('log').textContent = `결과 로드 실패\n${loaded.error || ''}`
+$('cancelReview').addEventListener('click', () => {
+  closeModal()
+  $('log').textContent = '사용자가 취소했습니다. 실제 복사/이동은 수행하지 않았습니다.'
+})
+
+$('confirmReview').addEventListener('click', async () => {
+  const s = getSettingFromUI()
+  if (s.exportMode === 'move') {
+    const ok = window.confirm('move mode는 원본을 이동합니다. 최종 확인하시겠습니까?')
+    if (!ok) return
+  }
+
+  const result = await window.ktk.applyReviewExport({
+    outputDir: s.outputDir,
+    exportMode: s.exportMode,
+    conflictPolicy: s.conflictPolicy,
+    items: modalItems,
+  })
+
+  if (!result.ok) {
+    $('log').textContent = `적용 실패\n${result.stderr || result.stdout || ''}`
     return
   }
-  currentRows = loaded.rows || []
-  renderReview(currentRows)
-}
 
-$('loadResult').addEventListener('click', loadArtifactsAndRender)
-
-$('saveOverrides').addEventListener('click', async () => {
-  const out = $('outputDir').value.trim()
-  if (!out) return
-  const res = await window.ktk.saveOverrides(out, overrides)
-  $('log').textContent = res.ok ? `재분류 저장 완료\n${res.stdout || ''}` : `재분류 저장 실패\n${res.stderr || ''}`
+  closeModal()
+  $('log').textContent = `적용 완료\n${JSON.stringify(result.summary || {}, null, 2)}`
 })
 
 $('runBtn').addEventListener('click', async () => {
-  const payload = getSettingFromUI()
-  if (!payload.inputDir || !payload.outputDir) {
+  const s = getSettingFromUI()
+  if (!s.inputDir || !s.outputDir) {
     $('log').textContent = '입력/출력 폴더를 먼저 지정해 주세요.'
     return
   }
 
-  if (payload.exportMode === 'move') {
-    const ok = window.confirm('move mode는 원본 파일을 이동합니다. 계속할까요?')
-    if (!ok) return
-  }
-
   $('runBtn').disabled = true
-  $('log').textContent = '실행 중...'
+  $('log').textContent = '분석 중... (report mode)'
   persistRecent()
 
-  const res = await window.ktk.runCuller(payload)
+  const analyzed = await window.ktk.analyzeForReview(s)
   $('runBtn').disabled = false
-  const txt = [
-    `[exit=${res.code}] ok=${res.ok}`,
-    res.stdout ? `\n[stdout]\n${res.stdout}` : '',
-    res.stderr ? `\n[stderr]\n${res.stderr}` : '',
-  ].join('\n')
-  $('log').textContent = txt
 
-  if (res.ok) {
-    await loadArtifactsAndRender()
+  if (!analyzed.ok) {
+    $('log').textContent = `[exit=${analyzed.code}] 실패\n${analyzed.stderr || analyzed.stdout || ''}`
+    return
   }
+
+  const rows = analyzed.rows || []
+  const items = rows.map((r) => ({
+    ...r,
+    decision: r.class === 'reject' ? 'reject' : 'approve',
+  }))
+
+  $('log').textContent = `분석 완료: total=${rows.length}. 검토 팝업에서 approve/reject 조정 후 확인을 눌러주세요.`
+  openModal(items)
 })
 
 $('conflictPolicy').addEventListener('change', persistRecent)

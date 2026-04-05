@@ -3,9 +3,7 @@ const path = require('path')
 const { spawn } = require('child_process')
 
 function getProjectRoot() {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'app', 'embedded')
-  }
+  if (app.isPackaged) return path.join(process.resourcesPath, 'app', 'embedded')
   return path.join(__dirname, 'embedded')
 }
 
@@ -25,19 +23,19 @@ async function ensurePythonDeps(root) {
     cwd: root,
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   })
-  if (check.code === 0) return { ok: true, installed: false }
+  if (check.code === 0) return { ok: true }
 
   const install = await runProcess('python3', ['-m', 'pip', 'install', '--user', '-r', 'requirements.txt'], {
     cwd: root,
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   })
-  return { ok: install.code === 0, installed: true, checkErr: check.stderr, installOut: install.stdout, installErr: install.stderr }
+  return { ok: install.code === 0, checkErr: check.stderr, installOut: install.stdout, installErr: install.stderr }
 }
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
-    height: 860,
+    width: 1240,
+    height: 900,
     backgroundColor: '#161616',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -56,24 +54,14 @@ ipcMain.handle('pick-folder', async () => {
   return res.filePaths[0]
 })
 
-ipcMain.handle('run-culler', async (_evt, payload) => {
+ipcMain.handle('open-path', async (_evt, p) => {
+  if (!p) return false
+  await shell.openPath(p)
+  return true
+})
+
+ipcMain.handle('analyze-for-review', async (_evt, payload) => {
   const root = getProjectRoot()
-  const args = ['-m', 'ktk_select.cli', 'run', '--input', payload.inputDir, '--output', payload.outputDir]
-
-  args.push('--eyes-level', String(payload.levels?.eyes_closed ?? 2))
-  args.push('--focus-level', String(payload.levels?.out_of_focus_subject ?? 2))
-  args.push('--blur-level', String(payload.levels?.motion_blur ?? 1))
-  args.push('--exposure-level', String(payload.levels?.exposure_bad ?? 1))
-  args.push('--duplicate-level', String(payload.levels?.duplicate ?? 1))
-  args.push('--occlusion-level', String(payload.levels?.occlusion ?? 0))
-  args.push('--composition-level', String(payload.levels?.composition_bad ?? 0))
-
-  args.push('--export-mode', String(payload.exportMode || 'copy'))
-  args.push('--conflict-policy', String(payload.conflictPolicy || 'rename'))
-  if (String(payload.exportMode || 'copy') === 'move') {
-    args.push('--confirm-move')
-  }
-
   const prep = await ensurePythonDeps(root)
   if (!prep.ok) {
     return {
@@ -84,62 +72,139 @@ ipcMain.handle('run-culler', async (_evt, payload) => {
     }
   }
 
+  const tempOut = path.join(payload.outputDir, '.ktk_review_tmp')
+  const args = ['-m', 'ktk_select.cli', 'run', '--input', payload.inputDir, '--output', tempOut]
+  args.push('--eyes-level', String(payload.levels?.eyes_closed ?? 2))
+  args.push('--focus-level', String(payload.levels?.out_of_focus_subject ?? 2))
+  args.push('--blur-level', String(payload.levels?.motion_blur ?? 1))
+  args.push('--exposure-level', String(payload.levels?.exposure_bad ?? 1))
+  args.push('--duplicate-level', String(payload.levels?.duplicate ?? 1))
+  args.push('--occlusion-level', String(payload.levels?.occlusion ?? 0))
+  args.push('--composition-level', String(payload.levels?.composition_bad ?? 0))
+  args.push('--export-mode', 'report')
+
   const ran = await runProcess('python3', args, {
     cwd: root,
     env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
   })
-  return { ok: ran.code === 0, code: ran.code, stdout: ran.stdout, stderr: ran.stderr }
-})
 
-ipcMain.handle('open-path', async (_evt, p) => {
-  if (!p) return false
-  await shell.openPath(p)
-  return true
-})
+  if (ran.code !== 0) return { ok: false, code: ran.code, stdout: ran.stdout, stderr: ran.stderr }
 
-ipcMain.handle('load-run-artifacts', async (_evt, outputDir) => {
-  const root = getProjectRoot()
   const py = `
 import csv, json, pathlib, sys
 out = pathlib.Path(sys.argv[1])
-res = out / 'result.csv'
-sumj = out / 'summary.json'
 rows = []
-if res.exists():
-    with res.open('r', encoding='utf-8', newline='') as f:
-        rows = list(csv.DictReader(f))
-summary = {}
-if sumj.exists():
-    summary = json.loads(sumj.read_text(encoding='utf-8'))
+with (out / 'result.csv').open('r', encoding='utf-8', newline='') as f:
+    rows = list(csv.DictReader(f))
+summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
 print(json.dumps({'rows': rows, 'summary': summary}, ensure_ascii=False))
 `
-  const got = await runProcess('python3', ['-c', py, outputDir], {
-    cwd: root,
-    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
-  })
-  if (got.code !== 0) return { ok: false, error: got.stderr || got.stdout }
-  try {
-    return { ok: true, ...(JSON.parse(got.stdout || '{}')) }
-  } catch (e) {
-    return { ok: false, error: String(e) }
-  }
-})
-
-ipcMain.handle('save-overrides', async (_evt, outputDir, overrides) => {
-  const root = getProjectRoot()
-  const py = `
-import json, pathlib, sys
-out = pathlib.Path(sys.argv[1])
-out.mkdir(parents=True, exist_ok=True)
-data = json.loads(sys.argv[2])
-(out / 'overrides.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
-print(str(out / 'overrides.json'))
-`
-  const res = await runProcess('python3', ['-c', py, outputDir, JSON.stringify(overrides || {})], {
+  const loaded = await runProcess('python3', ['-c', py, tempOut], {
     cwd: root,
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   })
-  return { ok: res.code === 0, stdout: res.stdout, stderr: res.stderr }
+  if (loaded.code !== 0) return { ok: false, code: 1, stdout: ran.stdout, stderr: loaded.stderr || loaded.stdout }
+
+  try {
+    const parsed = JSON.parse(loaded.stdout || '{}')
+    return { ok: true, code: 0, stdout: ran.stdout, stderr: ran.stderr, ...parsed }
+  } catch (e) {
+    return { ok: false, code: 1, stdout: ran.stdout, stderr: String(e) }
+  }
+})
+
+ipcMain.handle('apply-review-export', async (_evt, payload) => {
+  const root = getProjectRoot()
+  const py = `
+import json, pathlib, shutil, sys
+
+output_dir = pathlib.Path(sys.argv[1])
+mode = sys.argv[2]
+conflict = sys.argv[3]
+items = json.loads(sys.argv[4])
+
+reason_priority = [
+  ('eyes_closed', '눈감음'),
+  ('out_of_focus_subject', '초점'),
+  ('focus_unavailable', '초점'),
+  ('motion_blur', '흔들림'),
+  ('exposure_bad', '노출'),
+  ('duplicate:', '중복'),
+]
+
+def bucket(reject_reasons: str):
+  t = (reject_reasons or '')
+  for k, v in reason_priority:
+    if k in t:
+      return v
+  return '기타'
+
+def resolve_target(target: pathlib.Path):
+  if not target.exists():
+    return target
+  if conflict == 'overwrite':
+    return target
+  if conflict == 'skip':
+    return None
+  stem, suffix = target.stem, target.suffix
+  i = 1
+  while True:
+    cand = target.parent / f'{stem}_{i}{suffix}'
+    if not cand.exists():
+      return cand
+    i += 1
+
+(output_dir / 'approve').mkdir(parents=True, exist_ok=True)
+(output_dir / 'reject').mkdir(parents=True, exist_ok=True)
+for _, v in reason_priority:
+  (output_dir / 'reject' / v).mkdir(parents=True, exist_ok=True)
+(output_dir / 'reject' / '기타').mkdir(parents=True, exist_ok=True)
+
+copied = moved = skipped = 0
+for it in items:
+  src = pathlib.Path(it.get('file', ''))
+  if not src.exists():
+    continue
+  decision = it.get('decision', 'approve')
+  if decision == 'reject':
+    dst = output_dir / 'reject' / bucket(it.get('reject_reasons', '')) / src.name
+  else:
+    dst = output_dir / 'approve' / src.name
+
+  dst.parent.mkdir(parents=True, exist_ok=True)
+  dst2 = resolve_target(dst)
+  if dst2 is None:
+    skipped += 1
+    continue
+
+  if mode == 'move':
+    shutil.move(str(src), str(dst2)); moved += 1
+  else:
+    shutil.copy2(str(src), str(dst2)); copied += 1
+
+summary = {
+  'mode': mode,
+  'conflict_policy': conflict,
+  'copied': copied,
+  'moved': moved,
+  'skipped': skipped,
+  'total': len(items),
+}
+(output_dir / 'review_apply_summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+print(json.dumps(summary, ensure_ascii=False))
+`
+
+  const res = await runProcess('python3', ['-c', py, payload.outputDir, payload.exportMode, payload.conflictPolicy, JSON.stringify(payload.items || [])], {
+    cwd: root,
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+  })
+  if (res.code !== 0) return { ok: false, code: res.code, stdout: res.stdout, stderr: res.stderr }
+
+  try {
+    return { ok: true, code: 0, summary: JSON.parse(res.stdout || '{}') }
+  } catch {
+    return { ok: true, code: 0, stdout: res.stdout }
+  }
 })
 
 app.whenReady().then(() => {

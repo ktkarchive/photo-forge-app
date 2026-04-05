@@ -34,17 +34,14 @@ button {
   padding: 10px 12px;
   cursor: pointer;
 }
-button.primary {
-  background: #0f62fe;
-  border-color: #0f62fe;
-}
+button.primary { background: #0f62fe; border-color: #0f62fe; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 6px; }
 .level { background: #1f1f1f; border: 1px solid #393939; border-radius: 8px; padding: 8px; display: grid; grid-template-columns: 110px 1fr 24px; align-items: center; gap: 8px; }
 .level span { font-size: 13px; color: #c6c6c6; }
 .options { display: flex; gap: 18px; margin: 12px 0; color: #c6c6c6; flex-wrap: wrap; }
 .actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 #log {
-  min-height: 120px;
+  min-height: 110px;
   background: #0f0f0f;
   border: 1px solid #393939;
   border-radius: 8px;
@@ -53,19 +50,22 @@ button.primary {
   word-break: break-word;
   color: #d0e2ff;
 }
-.reviewSection { margin-top: 14px; }
-.reviewHeader { display: flex; align-items: center; justify-content: space-between; }
-.reviewHeader h3 { margin: 0; font-size: 16px; }
-.reviewHeader span { color: #a8a8a8; }
-.reviewGrid { margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.reviewCard { border: 1px solid #393939; border-radius: 8px; padding: 8px; background: #1b1b1b; }
-.thumb { width: 100%; height: 140px; object-fit: cover; border-radius: 6px; border: 1px solid #444; cursor: pointer; }
+
+.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.68); display: flex; align-items: center; justify-content: center; z-index: 99; }
+.hidden { display: none; }
+.modalCard { width: min(1180px, 95vw); height: min(820px, 92vh); background: #1f1f1f; border: 1px solid #393939; border-radius: 12px; display: flex; flex-direction: column; padding: 12px; }
+.modalHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.modalHead h3 { margin: 0; }
+.reviewGrid { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 4px; }
+.reviewCard { border: 1px solid #3b3b3b; border-radius: 8px; background: #262626; padding: 8px; }
+.thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d; cursor: pointer; }
 .meta { margin-top: 8px; }
 .filename { font-size: 12px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reasons { margin-top: 4px; font-size: 11px; color: #a8a8a8; min-height: 28px; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 999px; margin-bottom: 6px; }
-.badge-reject { background: #520408; color: #ffd7d9; }
-.badge-review { background: #3d2d00; color: #ffe7a8; }
-.badge-keep { background: #004144; color: #b8f4f6; }
-.smallActions { display: flex; gap: 4px; margin-top: 8px; }
-.smallActions button { font-size: 11px; padding: 6px 8px; }
+.reasons { margin-top: 4px; font-size: 11px; color: #a8a8a8; min-height: 30px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.chip { font-size: 10px; padding: 2px 6px; border: 1px solid #555; border-radius: 999px; color: #9f9f9f; }
+.chip.active { border-color: #ff8389; color: #ffd0d3; background: #520408; }
+.smallActions { display: flex; gap: 6px; margin-top: 8px; }
+.smallActions button { flex: 1; font-size: 11px; padding: 6px 8px; }
+.smallActions button.sel { border-color: #0f62fe; color: #d0e2ff; }
+.modalActions { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
