@@ -37,10 +37,10 @@ def _load_image(path: Path):
 
 
 REJECT_REASON_PRIORITY = [
-    ("eyes_closed", "눈감음"),
+    ("eyes_closed", "눈감"),
     ("out_of_focus_subject", "초점"),
     ("focus_unavailable", "초점"),
-    ("motion_blur", "흔들림"),
+    ("motion_blur", "블러"),
     ("exposure_bad", "노출"),
     ("duplicate:", "중복"),
 ]
@@ -52,7 +52,6 @@ def _ensure_dirs(output_dir: Path):
     (output_dir / "review").mkdir(parents=True, exist_ok=True)
     for _key, label in REJECT_REASON_PRIORITY:
         (output_dir / "reject" / label).mkdir(parents=True, exist_ok=True)
-    (output_dir / "reject" / "기타").mkdir(parents=True, exist_ok=True)
 
 
 def _resolve_export_mode(args) -> str:
@@ -73,7 +72,7 @@ def _reject_bucket_label(reject_reasons: List[str]) -> str:
     for key, label in REJECT_REASON_PRIORITY:
         if key in text:
             return label
-    return "기타"
+    return ""
 
 
 def _resolve_target_path(target: Path, conflict_policy: str) -> Path | None:
@@ -262,7 +261,10 @@ def run_command(args):
         if export_mode != "report":
             if klass == "reject":
                 reject_bucket = _reject_bucket_label(reject_reasons)
-                target = output_dir / "reject" / reject_bucket / p.name
+                if reject_bucket:
+                    target = output_dir / "reject" / reject_bucket / p.name
+                else:
+                    target = output_dir / "reject" / p.name
             else:
                 target = output_dir / klass / p.name
             target.parent.mkdir(parents=True, exist_ok=True)

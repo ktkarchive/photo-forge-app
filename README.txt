@@ -47,7 +47,7 @@ ktk.select CLI (MVP)
 - output/result.csv
 - output/summary.json
 - output/keep, output/review
-- output/reject/{눈감음|초점|흔들림|노출|중복|기타} (사유 우선순위 분류)
+- output/reject/{눈감|초점|블러|노출|중복} (사유 우선순위 분류)
 - report mode일 때는 파일 폴더 생성 없이 리포트만 생성
 
 config 사용

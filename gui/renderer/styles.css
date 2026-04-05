@@ -62,6 +62,7 @@ button.primary { background: #0f62fe; border-color: #0f62fe; }
 .meta { margin-top: 8px; }
 .filename { font-size: 12px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reasons { margin-top: 4px; font-size: 11px; color: #a8a8a8; min-height: 30px; }
+.scoreline { margin-top: 4px; font-size: 11px; color: #c6c6c6; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 .chip { font-size: 10px; padding: 2px 6px; border: 1px solid #555; border-radius: 999px; color: #9f9f9f; }
 .chip.active { border-color: #ff8389; color: #ffd0d3; background: #520408; }

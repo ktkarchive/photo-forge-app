@@ -124,10 +124,10 @@ conflict = sys.argv[3]
 items = json.loads(sys.argv[4])
 
 reason_priority = [
-  ('eyes_closed', '눈감음'),
+  ('eyes_closed', '눈감'),
   ('out_of_focus_subject', '초점'),
   ('focus_unavailable', '초점'),
-  ('motion_blur', '흔들림'),
+  ('motion_blur', '블러'),
   ('exposure_bad', '노출'),
   ('duplicate:', '중복'),
 ]
@@ -137,7 +137,7 @@ def bucket(reject_reasons: str):
   for k, v in reason_priority:
     if k in t:
       return v
-  return '기타'
+  return '수동'
 
 def resolve_target(target: pathlib.Path):
   if not target.exists():
@@ -158,7 +158,7 @@ def resolve_target(target: pathlib.Path):
 (output_dir / 'reject').mkdir(parents=True, exist_ok=True)
 for _, v in reason_priority:
   (output_dir / 'reject' / v).mkdir(parents=True, exist_ok=True)
-(output_dir / 'reject' / '기타').mkdir(parents=True, exist_ok=True)
+(output_dir / 'reject' / '수동').mkdir(parents=True, exist_ok=True)
 
 copied = moved = skipped = 0
 for it in items:

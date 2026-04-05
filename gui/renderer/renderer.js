@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id)
 
-const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup']
+const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup', 'compromise']
 for (const id of ids) {
   const el = $(id)
   const out = $(`${id}Val`)
@@ -15,9 +15,9 @@ const RECENT_KEY = 'ktk.select.recent.v1'
 let modalItems = []
 
 const defaultPresets = {
-  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0 },
-  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1 },
-  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2 },
+  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, compromise: 0 },
+  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1, compromise: 0 },
+  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2, compromise: 0 },
 }
 
 function loadPresets() {
@@ -40,6 +40,7 @@ function applyLevelSet(levels) {
     blur: levels.blur ?? levels.motion_blur ?? 1,
     exposure: levels.exposure ?? levels.exposure_bad ?? 1,
     dup: levels.dup ?? levels.duplicate ?? 1,
+    compromise: levels.compromise ?? 0,
   }
   for (const [k, v] of Object.entries(map)) {
     $(k).value = String(v)
@@ -53,6 +54,7 @@ function getSettingFromUI() {
     outputDir: $('outputDir').value.trim(),
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
+    compromise: Number($('compromise').value),
     levels: {
       eyes_closed: Number($('eyes').value),
       out_of_focus_subject: Number($('focus').value),
@@ -79,26 +81,51 @@ function restoreRecent() {
       const radio = document.querySelector(`input[name="exportMode"][value="${v.exportMode}"]`)
       if (radio) radio.checked = true
     }
-    if (v.levels) applyLevelSet(v.levels)
+    if (v.levels || typeof v.compromise !== 'undefined') applyLevelSet({ ...(v.levels || {}), compromise: v.compromise ?? 0 })
   } catch {}
 }
 
-function pickRejectBucket(rejectReasons) {
+function reasonFlags(rejectReasons) {
   const t = String(rejectReasons || '')
-  if (t.includes('eyes_closed')) return '눈감음'
-  if (t.includes('out_of_focus_subject') || t.includes('focus_unavailable')) return '초점'
-  if (t.includes('motion_blur')) return '흔들림'
-  if (t.includes('exposure_bad')) return '노출'
-  if (t.includes('duplicate:')) return '중복'
-  return '기타'
+  return {
+    눈감: t.includes('eyes_closed'),
+    초점: t.includes('out_of_focus_subject') || t.includes('focus_unavailable'),
+    블러: t.includes('motion_blur'),
+    노출: t.includes('exposure_bad'),
+    중복: t.includes('duplicate:'),
+  }
+}
+
+function reasonScores(item) {
+  const f = reasonFlags(item.reject_reasons)
+  const levels = item._levels
+  return {
+    눈감: f.눈감 ? levels.eyes_closed : 0,
+    초점: f.초점 ? levels.out_of_focus_subject : 0,
+    블러: f.블러 ? levels.motion_blur : 0,
+    노출: f.노출 ? levels.exposure_bad : 0,
+    중복: f.중복 ? levels.duplicate : 0,
+  }
+}
+
+function sumScore(sc) {
+  return sc.눈감 + sc.초점 + sc.블러 + sc.노출 + sc.중복
+}
+
+function scoreLine(sc) {
+  return `눈감(${sc.눈감}) 초점(${sc.초점}) 블러(${sc.블러}) 노출(${sc.노출}) 중복(${sc.중복})`
 }
 
 function reasonChips(rejectReasons) {
-  const all = ['눈감음', '초점', '흔들림', '노출', '중복', '기타']
-  const active = pickRejectBucket(rejectReasons)
-  return all
-    .map((x) => `<span class="chip ${x === active ? 'active' : ''}">${x}</span>`)
+  const flags = reasonFlags(rejectReasons)
+  return ['눈감', '초점', '블러', '노출', '중복']
+    .map((x) => `<span class="chip ${flags[x] ? 'active' : ''}">${x}</span>`)
     .join('')
+}
+
+function refreshModalSummary() {
+  const rejectCnt = modalItems.filter((x) => x.decision === 'reject').length
+  $('modalSummary').textContent = `${modalItems.length}건 (reject ${rejectCnt})`
 }
 
 function makeReviewCard(item) {
@@ -111,9 +138,12 @@ function makeReviewCard(item) {
   img.loading = 'lazy'
   img.onclick = () => window.ktk.openPath(item.file)
 
+  const sc = reasonScores(item)
+  const total = sumScore(sc)
+
   const meta = document.createElement('div')
   meta.className = 'meta'
-  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="chips">${reasonChips(item.reject_reasons)}</div>`
+  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="scoreline">${scoreLine(sc)} · 합계(${total})</div><div class="chips">${reasonChips(item.reject_reasons)}</div>`
 
   const toggles = document.createElement('div')
   toggles.className = 'smallActions'
@@ -130,10 +160,12 @@ function makeReviewCard(item) {
   a.onclick = () => {
     item.decision = 'approve'
     applyUI()
+    refreshModalSummary()
   }
   r.onclick = () => {
     item.decision = 'reject'
     applyUI()
+    refreshModalSummary()
   }
   applyUI()
 
@@ -150,8 +182,7 @@ function openModal(items) {
   modalItems = items
   $('reviewGrid').innerHTML = ''
   items.forEach((it) => $('reviewGrid').appendChild(makeReviewCard(it)))
-  const rejectCnt = items.filter((x) => x.decision === 'reject').length
-  $('modalSummary').textContent = `${items.length}건 (reject ${rejectCnt})`
+  refreshModalSummary()
   $('reviewModal').classList.remove('hidden')
 }
 
@@ -173,6 +204,7 @@ $('savePreset').addEventListener('click', () => {
     blur: Number($('blur').value),
     exposure: Number($('exposure').value),
     dup: Number($('dup').value),
+    compromise: Number($('compromise').value),
   }
   savePresets(presets)
   $('log').textContent = '프리셋 저장 완료'
@@ -244,10 +276,16 @@ $('runBtn').addEventListener('click', async () => {
   }
 
   const rows = analyzed.rows || []
-  const items = rows.map((r) => ({
-    ...r,
-    decision: r.class === 'reject' ? 'reject' : 'approve',
-  }))
+  const compromise = Number(s.compromise || 0)
+  const items = rows.map((r) => {
+    const it = { ...r, _levels: s.levels }
+    const sc = reasonScores(it)
+    const total = sumScore(sc)
+    const hasAny = total > 0
+    let decision = 'approve'
+    if (hasAny && total > compromise) decision = 'reject'
+    return { ...it, decision }
+  })
 
   $('log').textContent = `분석 완료: total=${rows.length}. 검토 팝업에서 approve/reject 조정 후 확인을 눌러주세요.`
   openModal(items)
