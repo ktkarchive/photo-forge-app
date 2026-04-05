@@ -10,6 +10,12 @@ for (const id of ids) {
   })
 }
 
+$('burstWindow').addEventListener('input', () => {
+  const v = Number($('burstWindow').value || 1.5)
+  $('burstWindowVal').textContent = v.toFixed(1)
+  persistRecent()
+})
+
 const PRESET_KEY = 'photoforge.presets.v1'
 const RECENT_KEY = 'photoforge.recent.v1'
 const LEGACY_PRESET_KEY = 'ktk.select.presets.v1'
@@ -64,6 +70,7 @@ function getSettingFromUI() {
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
     compromise: Number($('compromise').value),
+    burstWindowSec: Number($('burstWindow').value || 1.5),
     levels: {
       eyes_closed: Number($('eyes').value),
       out_of_focus_subject: Number($('focus').value),
@@ -90,6 +97,11 @@ function restoreRecent() {
     if (v.exportMode) {
       const radio = document.querySelector(`input[name="exportMode"][value="${v.exportMode}"]`)
       if (radio) radio.checked = true
+    }
+    if (typeof v.burstWindowSec !== 'undefined') {
+      const bw = Math.max(0.5, Math.min(5.0, Number(v.burstWindowSec || 1.5)))
+      $('burstWindow').value = bw.toFixed(1)
+      $('burstWindowVal').textContent = bw.toFixed(1)
     }
     if (v.levels || typeof v.compromise !== 'undefined') applyLevelSet({ ...(v.levels || {}), compromise: v.compromise ?? 0 })
   } catch {}

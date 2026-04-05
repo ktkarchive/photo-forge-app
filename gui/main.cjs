@@ -82,6 +82,7 @@ ipcMain.handle('analyze-for-review', async (_evt, payload) => {
   args.push('--occlusion-level', String(payload.levels?.occlusion ?? 0))
   args.push('--composition-level', String(payload.levels?.composition_bad ?? 0))
   args.push('--export-mode', 'report')
+  args.push('--burst-window-sec', String(payload.burstWindowSec ?? 1.5))
 
   const ran = await runProcess('python3', args, {
     cwd: root,
