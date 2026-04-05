@@ -7,111 +7,124 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app">
-      <header class="top">
-        <div>
-          <h1>Photo Forge</h1>
-          <p>Stitch-guided IBM Carbon Dark · 인간 친화형 단순 레이아웃</p>
+    <div class="layout3">
+      <aside class="leftPane">
+        <div class="leftTop">
+          <div class="logoSlot">Photo Forge</div>
+          <div class="logoSub">로고/브랜드 영역</div>
         </div>
-      </header>
 
-      <main class="card">
-        <div class="row two-col">
-          <div>
+        <div class="leftCenter">
+          <button id="runBtn" class="primary runBtn">분석실행</button>
+
+          <div class="menuBlock">
             <label>프리셋</label>
-            <div class="field">
+            <div class="rowInline">
               <select id="presetSelect">
                 <option value="conservative">인물촬영(보수)</option>
                 <option value="balanced" selected>인물촬영(균형)</option>
                 <option value="aggressive">인물촬영(공격)</option>
               </select>
-              <button id="savePreset">현재값 저장</button>
+              <button id="savePreset" class="ghost">저장</button>
             </div>
           </div>
-          <div>
-            <label>파일명 충돌 정책</label>
-            <select id="conflictPolicy">
-              <option value="rename" selected>rename (자동 번호)</option>
-              <option value="skip">skip</option>
-              <option value="overwrite">overwrite</option>
-            </select>
+
+          <div class="menuBlock">
+            <div class="sliderRow"><span>연사</span><input id="burstLevel" type="range" min="0" max="3" step="1" value="2" /><b id="burstLevelVal">2</b></div>
+          </div>
+
+          <div class="menuBlock">
+            <div class="blockTitle">셀렉 옵션</div>
+            <div class="sliderRow"><span>눈감</span><input id="eyes" type="range" min="0" max="3" value="2" /><b id="eyesVal">2</b></div>
+            <div class="sliderRow"><span>초점</span><input id="focus" type="range" min="0" max="3" value="2" /><b id="focusVal">2</b></div>
+            <div class="sliderRow"><span>블러</span><input id="blur" type="range" min="0" max="3" value="1" /><b id="blurVal">1</b></div>
+            <div class="sliderRow"><span>노출</span><input id="exposure" type="range" min="0" max="3" value="1" /><b id="exposureVal">1</b></div>
+            <div class="sliderRow"><span>중복</span><input id="dup" type="range" min="0" max="3" value="1" /><b id="dupVal">1</b></div>
+          </div>
+
+          <div class="menuBlock">
+            <div class="sliderRow"><span>타협</span><input id="compromise" type="range" min="0" max="15" value="0" /><b id="compromiseVal">0</b></div>
           </div>
         </div>
 
-        <div class="row">
-          <label>입력 폴더</label>
-          <div class="field">
+        <div class="leftBottom">
+          <div class="pathRow">
+            <span>입력</span>
             <input id="inputDir" placeholder="/path/to/photos" />
-            <button id="pickInput">찾기</button>
+            <button id="pickInput" class="iconBtn" title="입력 폴더 찾기">📁</button>
           </div>
-        </div>
-
-        <div class="row">
-          <label>출력 폴더</label>
-          <div class="field">
+          <div class="pathRow">
+            <span>출력</span>
             <input id="outputDir" placeholder="/path/to/output" />
-            <button id="pickOutput">찾기</button>
+            <button id="pickOutput" class="iconBtn" title="출력 폴더 찾기">📁</button>
+          </div>
+          <div class="leftBottomActions">
+            <button id="openOut" class="ghost">출력 열기</button>
+            <button id="openSettings" class="ghost">설정</button>
           </div>
         </div>
+      </aside>
 
-        <div class="grid">
-          <div class="level"><span>눈감</span><input id="eyes" type="range" min="0" max="3" value="2" /><b id="eyesVal">2</b></div>
-          <div class="level"><span>피사체 초점</span><input id="focus" type="range" min="0" max="3" value="2" /><b id="focusVal">2</b></div>
-          <div class="level"><span>블러</span><input id="blur" type="range" min="0" max="3" value="1" /><b id="blurVal">1</b></div>
-          <div class="level"><span>노출</span><input id="exposure" type="range" min="0" max="3" value="1" /><b id="exposureVal">1</b></div>
-          <div class="level"><span>중복</span><input id="dup" type="range" min="0" max="3" value="1" /><b id="dupVal">1</b></div>
-          <div class="level burstLevel"><span>버스트 윈도우(초)</span><input id="burstWindow" type="range" min="0.5" max="5.0" step="0.1" value="1.5" /><b id="burstWindowVal">1.5</b><div class="burstPresets"><button type="button" class="burstPreset" data-burst="0.8">0.8s(연사 타이트)</button><button type="button" class="burstPreset active" data-burst="1.5">1.5s(기본)</button><button type="button" class="burstPreset" data-burst="2.5">2.5s(여유)</button></div></div>
-          <div class="level"><span>타협점수</span><input id="compromise" type="range" min="0" max="15" value="0" /><b id="compromiseVal">0</b></div>
+      <main class="centerPane">
+        <div class="paneHeader">분석 결과</div>
+        <div id="reviewPanel" class="reviewPanel hidden">
+          <div class="reviewHead">
+            <span id="modalSummary">0건</span>
+          </div>
+          <div class="reviewToolbar">
+            <label>필터
+              <select id="reviewFilter">
+                <option value="all" selected>전체</option>
+                <option value="approve">approve</option>
+                <option value="reject">reject</option>
+              </select>
+            </label>
+            <label>정렬
+              <select id="reviewSort">
+                <option value="score_desc" selected>점수 높은순</option>
+                <option value="score_asc">점수 낮은순</option>
+                <option value="name_asc">파일명 오름차순</option>
+                <option value="name_desc">파일명 내림차순</option>
+              </select>
+            </label>
+            <label class="scoreFilterWrap">score ≥
+              <input id="reviewMinScore" type="range" min="0" max="15" value="0" />
+              <b id="reviewMinScoreVal">0</b>
+            </label>
+            <button id="quickApproveView" class="ghostBtn" type="button">approve만 빠르게 보기</button>
+            <button id="quickRejectView" class="ghostBtn" type="button">reject만 빠르게 보기</button>
+          </div>
+          <div class="hotkeyHint">단축키: ↑↓←→ 이동, A=approve, R=reject, Q=approve quick, W=reject quick, Enter=확인, Esc=취소</div>
+          <div id="reviewGrid" class="reviewGrid"></div>
+          <div class="reviewActions">
+            <button id="cancelReview" class="ghost">취소</button>
+            <button id="confirmReview" class="primary">확인</button>
+          </div>
         </div>
-
-        <div class="options">
-          <label><input name="exportMode" type="radio" value="copy" checked /> copy mode(원본 유지 + 출력 폴더 복사)</label>
-          <label><input name="exportMode" type="radio" value="move" /> move mode(원본 이동)</label>
-        </div>
-
-        <div class="actions">
-          <button id="runBtn" class="primary">분석 실행</button>
-          <button id="openOut">출력 폴더 열기</button>
-        </div>
-
-        <pre id="log"></pre>
+        <div id="emptyCenter" class="emptyCenter">분석실행을 누르면 결과가 여기에 표시됩니다.</div>
       </main>
+
+      <aside class="rightPane">
+        <div class="paneHeader">상세</div>
+        <pre id="log"></pre>
+      </aside>
     </div>
 
-    <div id="reviewModal" class="modal hidden">
-      <div class="modalCard">
-        <div class="modalHead">
-          <h3>결과 검토 (Approve / Reject)</h3>
-          <span id="modalSummary">0건</span>
+    <div id="settingsModal" class="settingsModal hidden">
+      <div class="settingsCard">
+        <div class="settingsHead">
+          <h3>설정</h3>
+          <button id="closeSettings" class="ghost">닫기</button>
         </div>
-        <div class="reviewToolbar">
-          <label>필터
-            <select id="reviewFilter">
-              <option value="all" selected>전체</option>
-              <option value="approve">approve</option>
-              <option value="reject">reject</option>
-            </select>
-          </label>
-          <label>정렬
-            <select id="reviewSort">
-              <option value="score_desc" selected>점수 높은순</option>
-              <option value="score_asc">점수 낮은순</option>
-              <option value="name_asc">파일명 오름차순</option>
-              <option value="name_desc">파일명 내림차순</option>
-            </select>
-          </label>
-          <label class="scoreFilterWrap">score ≥
-            <input id="reviewMinScore" type="range" min="0" max="15" value="0" />
-            <b id="reviewMinScoreVal">0</b>
-          </label>
-          <button id="quickApproveView" class="ghostBtn" type="button">approve만 빠르게 보기</button>
-          <button id="quickRejectView" class="ghostBtn" type="button">reject만 빠르게 보기</button>
-          <span class="hotkeyHint">단축키: ↑↓←→ 이동, A=approve, R=reject, Q=approve quick, W=reject quick, Enter=확인, Esc=취소</span>
-        </div>
-        <div id="reviewGrid" class="reviewGrid"></div>
-        <div class="modalActions">
-          <button id="cancelReview">취소</button>
-          <button id="confirmReview" class="primary">확인</button>
+        <div class="settingsBody">
+          <label class="radioRow"><input name="exportMode" type="radio" value="copy" checked /> copy mode(원본 유지 + 출력 폴더 복사)</label>
+          <label class="radioRow"><input name="exportMode" type="radio" value="move" /> move mode(원본 이동)</label>
+          <label>파일명 충돌 정책</label>
+          <select id="conflictPolicy">
+            <option value="rename" selected>rename (자동 번호)</option>
+            <option value="skip">skip</option>
+            <option value="overwrite">overwrite</option>
+          </select>
         </div>
       </div>
     </div>

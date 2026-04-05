@@ -1,34 +1,15 @@
 const $ = (id) => document.getElementById(id)
 
-const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup', 'compromise']
+const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup', 'compromise', 'burstLevel']
 for (const id of ids) {
   const el = $(id)
   const out = $(`${id}Val`)
+  if (!el || !out) continue
   el.addEventListener('input', () => {
     out.textContent = el.value
     persistRecent()
   })
 }
-
-function syncBurstPresetButtons(v) {
-  document.querySelectorAll('.burstPreset').forEach((btn) => {
-    const pv = Number(btn.dataset.burst || 0)
-    btn.classList.toggle('active', Math.abs(pv - v) < 0.05)
-  })
-}
-
-function setBurstWindow(v, persist = true) {
-  const bw = Math.max(0.5, Math.min(5.0, Number(v || 1.5)))
-  $('burstWindow').value = bw.toFixed(1)
-  $('burstWindowVal').textContent = bw.toFixed(1)
-  syncBurstPresetButtons(bw)
-  if (persist) persistRecent()
-}
-
-$('burstWindow').addEventListener('input', () => {
-  const v = Number($('burstWindow').value || 1.5)
-  setBurstWindow(v)
-})
 
 const PRESET_KEY = 'photoforge.presets.v1'
 const RECENT_KEY = 'photoforge.recent.v1'
@@ -43,9 +24,17 @@ let quickViewMode = 'none'
 let activeFile = ''
 
 const defaultPresets = {
-  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, compromise: 0 },
-  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1, compromise: 0 },
-  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2, compromise: 0 },
+  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, compromise: 0, burstLevel: 1 },
+  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1, compromise: 0, burstLevel: 2 },
+  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2, compromise: 0, burstLevel: 3 },
+}
+
+function burstLevelToSec(level) {
+  const n = Number(level || 0)
+  if (n <= 0) return 0.0
+  if (n === 1) return 0.8
+  if (n === 2) return 1.5
+  return 2.5
 }
 
 function loadPresets() {
@@ -64,6 +53,7 @@ function savePresets(presets) {
 
 function applyLevelSet(levels) {
   const map = {
+    burstLevel: levels.burstLevel ?? 2,
     eyes: levels.eyes ?? levels.eyes_closed ?? 2,
     focus: levels.focus ?? levels.out_of_focus_subject ?? 2,
     blur: levels.blur ?? levels.motion_blur ?? 1,
@@ -78,13 +68,15 @@ function applyLevelSet(levels) {
 }
 
 function getSettingFromUI() {
+  const burstLevel = Number($('burstLevel').value || 0)
   return {
     inputDir: $('inputDir').value.trim(),
     outputDir: $('outputDir').value.trim(),
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
     compromise: Number($('compromise').value),
-    burstWindowSec: Number($('burstWindow').value || 1.5),
+    burstLevel,
+    burstWindowSec: burstLevelToSec(burstLevel),
     levels: {
       eyes_closed: Number($('eyes').value),
       out_of_focus_subject: Number($('focus').value),
@@ -112,12 +104,9 @@ function restoreRecent() {
       const radio = document.querySelector(`input[name="exportMode"][value="${v.exportMode}"]`)
       if (radio) radio.checked = true
     }
-    if (typeof v.burstWindowSec !== 'undefined') {
-      setBurstWindow(v.burstWindowSec, false)
-    } else {
-      setBurstWindow(1.5, false)
+    if (v.levels || typeof v.compromise !== 'undefined' || typeof v.burstLevel !== 'undefined') {
+      applyLevelSet({ ...(v.levels || {}), compromise: v.compromise ?? 0, burstLevel: v.burstLevel ?? 2 })
     }
-    if (v.levels || typeof v.compromise !== 'undefined') applyLevelSet({ ...(v.levels || {}), compromise: v.compromise ?? 0 })
   } catch {}
 }
 
@@ -297,7 +286,7 @@ function renderReviewGrid() {
   refreshModalSummary()
 }
 
-function openModal(items) {
+function openReview(items) {
   modalItems = items
   reviewFilter = 'all'
   reviewSort = 'score_desc'
@@ -309,13 +298,29 @@ function openModal(items) {
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
   syncQuickButtons()
   activeFile = items[0]?.file || ''
+  $('emptyCenter').classList.add('hidden')
+  $('reviewPanel').classList.remove('hidden')
   renderReviewGrid()
-  $('reviewModal').classList.remove('hidden')
 }
 
-function closeModal() {
-  $('reviewModal').classList.add('hidden')
+function closeReview() {
+  $('reviewPanel').classList.add('hidden')
+  $('emptyCenter').classList.remove('hidden')
 }
+
+function openSettings() {
+  $('settingsModal').classList.remove('hidden')
+}
+
+function closeSettings() {
+  $('settingsModal').classList.add('hidden')
+}
+
+$('openSettings').addEventListener('click', openSettings)
+$('closeSettings').addEventListener('click', closeSettings)
+$('settingsModal').addEventListener('click', (e) => {
+  if (e.target.id === 'settingsModal') closeSettings()
+})
 
 $('presetSelect').addEventListener('change', () => {
   const presets = loadPresets()
@@ -326,6 +331,7 @@ $('presetSelect').addEventListener('change', () => {
 $('savePreset').addEventListener('click', () => {
   const presets = loadPresets()
   presets[$('presetSelect').value] = {
+    burstLevel: Number($('burstLevel').value),
     eyes: Number($('eyes').value),
     focus: Number($('focus').value),
     blur: Number($('blur').value),
@@ -353,13 +359,6 @@ $('pickOutput').addEventListener('click', async () => {
 $('openOut').addEventListener('click', async () => {
   const p = $('outputDir').value.trim()
   if (p) await window.ktk.openPath(p)
-})
-
-document.querySelectorAll('.burstPreset').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const v = Number(btn.dataset.burst || 1.5)
-    setBurstWindow(v)
-  })
 })
 
 $('reviewFilter').addEventListener('change', () => {
@@ -430,7 +429,7 @@ $('quickApproveView').addEventListener('click', toggleQuickApproveView)
 $('quickRejectView').addEventListener('click', toggleQuickRejectView)
 
 $('cancelReview').addEventListener('click', () => {
-  closeModal()
+  closeReview()
   $('log').textContent = '사용자가 취소했습니다. 실제 복사/이동은 수행하지 않았습니다.'
 })
 
@@ -453,7 +452,7 @@ $('confirmReview').addEventListener('click', async () => {
     return
   }
 
-  closeModal()
+  closeReview()
   $('log').textContent = `적용 완료\n${JSON.stringify(result.summary || {}, null, 2)}`
 })
 
@@ -487,15 +486,15 @@ $('runBtn').addEventListener('click', async () => {
     return { ...it, decision }
   })
 
-  $('log').textContent = `분석 완료: total=${rows.length}. 검토 팝업에서 approve/reject 조정 후 확인을 눌러주세요.`
-  openModal(items)
+  $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 approve/reject 조정 후 확인을 누르세요.`
+  openReview(items)
 })
 
 $('conflictPolicy').addEventListener('change', persistRecent)
 document.querySelectorAll('input[name="exportMode"]').forEach((r) => r.addEventListener('change', persistRecent))
 
 document.addEventListener('keydown', (e) => {
-  if ($('reviewModal').classList.contains('hidden')) return
+  if ($('reviewPanel').classList.contains('hidden')) return
 
   const tag = (e.target?.tagName || '').toLowerCase()
   const isTypingTarget = tag === 'input' || tag === 'textarea' || tag === 'select'
