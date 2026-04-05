@@ -1,0 +1,7 @@
+{
+  "set_id": "S05_real_lite",
+  "purpose": "real image lite smoke regression",
+  "source": "macOS system cache images (non-personal)",
+  "file_count": 6,
+  "notes": "Converted from HEIC to JPG via sips"
+}

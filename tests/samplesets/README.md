@@ -17,6 +17,9 @@ ktk.select 샘플셋 표준 구조
   - S04_edge_cases/
     - input/                  # 손상 파일, EXIF 이상, 극단 노출
     - expected_baseline/
+  - S05_real_lite/
+    - input/                  # macOS 캐시 기반 실이미지 소량(개인사진 미포함)
+    - expected_baseline/
 
 각 세트에 포함할 메타 파일
 - manifest.json
