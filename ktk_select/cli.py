@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import shutil
+from datetime import datetime
 from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List
@@ -34,6 +35,53 @@ def _load_image(path: Path):
 
     img = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
     return img
+
+
+def _parse_exif_datetime(dt_text: str) -> float | None:
+    txt = (dt_text or "").strip()
+    if not txt:
+        return None
+    for fmt in ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(txt, fmt).timestamp()
+        except Exception:
+            pass
+    return None
+
+
+def _extract_capture_ts(path: Path) -> tuple[float | None, str]:
+    # 1) EXIF DateTimeOriginal 우선
+    try:
+        from PIL import Image
+
+        with Image.open(path) as im:
+            exif = im.getexif()
+            if exif:
+                dt = exif.get(36867) or exif.get(36868) or exif.get(306)
+                if dt:
+                    ts = _parse_exif_datetime(str(dt))
+                    if ts is not None:
+                        return ts, "exif"
+    except Exception:
+        pass
+
+    # 2) 폴백: 파일 mtime
+    try:
+        return float(path.stat().st_mtime), "mtime"
+    except Exception:
+        return None, "none"
+
+
+def _within_burst_window(item: Dict, rep_item: Dict, window_sec: float) -> bool:
+    if window_sec <= 0:
+        return True
+    if item.get("capture_ts_source") == "exif" and rep_item.get("capture_ts_source") == "exif":
+        t1 = item.get("capture_ts")
+        t2 = rep_item.get("capture_ts")
+        if t1 is None or t2 is None:
+            return True
+        return abs(float(t1) - float(t2)) <= float(window_sec)
+    return True
 
 
 REJECT_REASON_PRIORITY = [
@@ -203,6 +251,7 @@ def run_command(args):
     items: List[Dict] = []
     images = list(_iter_images(input_dir))
     for p in images:
+        capture_ts, capture_ts_source = _extract_capture_ts(p)
         image = _load_image(p)
         if image is None:
             items.append(
@@ -212,6 +261,8 @@ def run_command(args):
                     "review_reasons": ["load_failed"],
                     "scores": {},
                     "hash": None,
+                    "capture_ts": capture_ts,
+                    "capture_ts_source": capture_ts_source,
                 }
             )
             continue
@@ -252,6 +303,8 @@ def run_command(args):
                 "review_reasons": review_reasons,
                 "scores": scores,
                 "hash": ah,
+                "capture_ts": capture_ts,
+                "capture_ts_source": capture_ts_source,
             }
         )
 
@@ -259,23 +312,37 @@ def run_command(args):
     if rules.duplicate:
         groups: List[Dict] = []
         dup_threshold = int(thresholds.duplicate_hamming_max)
+        burst_window_sec = float(getattr(args, "burst_window_sec", 1.5))
 
-        for idx, item in enumerate(items):
+        candidate_indices = [i for i, it in enumerate(items) if it.get("hash") is not None]
+        candidate_indices.sort(
+            key=lambda i: (
+                0 if items[i].get("capture_ts") is not None else 1,
+                float(items[i].get("capture_ts") or 0.0),
+                str(items[i].get("file", "")),
+            )
+        )
+
+        for idx in candidate_indices:
+            item = items[idx]
             ah = item.get("hash")
-            if ah is None:
-                continue
 
             matched = False
             for g in groups:
                 rep_idx = g["rep_idx"]
-                rep_hash = items[rep_idx].get("hash")
+                rep_item = items[rep_idx]
+                rep_hash = rep_item.get("hash")
                 if rep_hash is None:
                     continue
+
+                if not _within_burst_window(item, rep_item, burst_window_sec):
+                    continue
+
                 hd = hamming_distance64(int(ah), int(rep_hash))
                 if hd <= dup_threshold:
                     g["members"].append(idx)
                     matched = True
-                    if _is_better_representative(item, items[rep_idx], rule_levels):
+                    if _is_better_representative(item, rep_item, rule_levels):
                         g["rep_idx"] = idx
                     break
 
@@ -368,12 +435,16 @@ def run_command(args):
         writer.writeheader()
         writer.writerows(rows)
 
+    exif_ts_used = sum(1 for it in items if it.get("capture_ts_source") == "exif")
+
     summary = {
         "input": str(input_dir),
         "output": str(output_dir),
         "export_mode": export_mode,
         "report_mode": export_mode == "report",
         "rule_levels": rule_levels,
+        "burst_window_sec": float(getattr(args, "burst_window_sec", 1.5)),
+        "exif_timestamp_used": exif_ts_used,
         "total": len(rows),
         "keep": sum(1 for r in rows if r["class"] == "keep"),
         "reject": sum(1 for r in rows if r["class"] == "reject"),
@@ -498,6 +569,7 @@ def build_parser():
     add_rule_level_args(run)
     run.add_argument("--config", default="", help="설정 파일(config.yaml)")
     run.add_argument("--export-mode", choices=["report", "copy", "move"], default="copy", help="출력 모드: report(리포트만), copy(복사), move(이동)")
+    run.add_argument("--burst-window-sec", type=float, default=1.5, help="EXIF 촬영시각 기준 버스트 묶음 윈도우(초)")
     run.add_argument("--conflict-policy", choices=["rename", "skip", "overwrite"], default="rename", help="동일 파일명 충돌 처리")
     run.add_argument("--confirm-move", action="store_true", help="move 모드 실행 확인")
     run.add_argument("--dry-run", action="store_true", help="[호환] report 모드와 동일")
