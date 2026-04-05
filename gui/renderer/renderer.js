@@ -19,7 +19,7 @@ let modalItems = []
 let reviewFilter = 'all'
 let reviewSort = 'score_desc'
 let reviewMinScore = 0
-let quickRejectMode = false
+let quickViewMode = 'none'
 let activeFile = ''
 
 const defaultPresets = {
@@ -139,10 +139,17 @@ function reasonChips(scores) {
     .join('')
 }
 
-function syncQuickRejectButton() {
-  const btn = $('quickRejectView')
-  btn.classList.toggle('active', quickRejectMode)
-  btn.textContent = quickRejectMode ? 'reject 빠른보기 ON' : 'reject만 빠르게 보기'
+function syncQuickButtons() {
+  const approveBtn = $('quickApproveView')
+  const rejectBtn = $('quickRejectView')
+  const approveOn = quickViewMode === 'approve'
+  const rejectOn = quickViewMode === 'reject'
+
+  approveBtn.classList.toggle('active', approveOn)
+  rejectBtn.classList.toggle('active', rejectOn)
+
+  approveBtn.textContent = approveOn ? 'approve 빠른보기 ON' : 'approve만 빠르게 보기'
+  rejectBtn.textContent = rejectOn ? 'reject 빠른보기 ON' : 'reject만 빠르게 보기'
 }
 
 function refreshModalSummary() {
@@ -250,12 +257,12 @@ function openModal(items) {
   reviewFilter = 'all'
   reviewSort = 'score_desc'
   reviewMinScore = 0
-  quickRejectMode = false
+  quickViewMode = 'none'
   $('reviewFilter').value = reviewFilter
   $('reviewSort').value = reviewSort
   $('reviewMinScore').value = String(reviewMinScore)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  syncQuickRejectButton()
+  syncQuickButtons()
   activeFile = items[0]?.file || ''
   renderReviewGrid()
   $('reviewModal').classList.remove('hidden')
@@ -305,9 +312,13 @@ $('openOut').addEventListener('click', async () => {
 
 $('reviewFilter').addEventListener('change', () => {
   reviewFilter = $('reviewFilter').value
-  if (quickRejectMode && reviewFilter !== 'reject') {
-    quickRejectMode = false
-    syncQuickRejectButton()
+  if (quickViewMode === 'approve' && reviewFilter !== 'approve') {
+    quickViewMode = 'none'
+    syncQuickButtons()
+  }
+  if (quickViewMode === 'reject' && reviewFilter !== 'reject') {
+    quickViewMode = 'none'
+    syncQuickButtons()
   }
   renderReviewGrid()
 })
@@ -320,16 +331,36 @@ $('reviewSort').addEventListener('change', () => {
 $('reviewMinScore').addEventListener('input', () => {
   reviewMinScore = Number($('reviewMinScore').value || 0)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  if (quickRejectMode && reviewMinScore < 1) {
-    quickRejectMode = false
-    syncQuickRejectButton()
+  if (quickViewMode === 'reject' && reviewMinScore < 1) {
+    quickViewMode = 'none'
+    syncQuickButtons()
+  }
+  if (quickViewMode === 'approve' && reviewMinScore !== 0) {
+    quickViewMode = 'none'
+    syncQuickButtons()
   }
   renderReviewGrid()
 })
 
+$('quickApproveView').addEventListener('click', () => {
+  quickViewMode = quickViewMode === 'approve' ? 'none' : 'approve'
+  if (quickViewMode === 'approve') {
+    reviewFilter = 'approve'
+    reviewMinScore = 0
+  } else {
+    reviewFilter = 'all'
+    reviewMinScore = 0
+  }
+  $('reviewFilter').value = reviewFilter
+  $('reviewMinScore').value = String(reviewMinScore)
+  $('reviewMinScoreVal').textContent = String(reviewMinScore)
+  syncQuickButtons()
+  renderReviewGrid()
+})
+
 $('quickRejectView').addEventListener('click', () => {
-  quickRejectMode = !quickRejectMode
-  if (quickRejectMode) {
+  quickViewMode = quickViewMode === 'reject' ? 'none' : 'reject'
+  if (quickViewMode === 'reject') {
     reviewFilter = 'reject'
     reviewMinScore = Math.max(1, Number($('reviewMinScore').value || 0))
   } else {
@@ -339,7 +370,7 @@ $('quickRejectView').addEventListener('click', () => {
   $('reviewFilter').value = reviewFilter
   $('reviewMinScore').value = String(reviewMinScore)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  syncQuickRejectButton()
+  syncQuickButtons()
   renderReviewGrid()
 })
 
