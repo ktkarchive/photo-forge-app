@@ -342,7 +342,7 @@ $('reviewMinScore').addEventListener('input', () => {
   renderReviewGrid()
 })
 
-$('quickApproveView').addEventListener('click', () => {
+function toggleQuickApproveView() {
   quickViewMode = quickViewMode === 'approve' ? 'none' : 'approve'
   if (quickViewMode === 'approve') {
     reviewFilter = 'approve'
@@ -356,9 +356,9 @@ $('quickApproveView').addEventListener('click', () => {
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
   syncQuickButtons()
   renderReviewGrid()
-})
+}
 
-$('quickRejectView').addEventListener('click', () => {
+function toggleQuickRejectView() {
   quickViewMode = quickViewMode === 'reject' ? 'none' : 'reject'
   if (quickViewMode === 'reject') {
     reviewFilter = 'reject'
@@ -372,7 +372,10 @@ $('quickRejectView').addEventListener('click', () => {
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
   syncQuickButtons()
   renderReviewGrid()
-})
+}
+
+$('quickApproveView').addEventListener('click', toggleQuickApproveView)
+$('quickRejectView').addEventListener('click', toggleQuickRejectView)
 
 $('cancelReview').addEventListener('click', () => {
   closeModal()
@@ -462,12 +465,19 @@ document.addEventListener('keydown', (e) => {
   const active = getActiveItem()
   if (!active) return
 
-  if (e.key.toLowerCase() === 'a') {
+  const key = e.key.toLowerCase()
+  if (key === 'a') {
     e.preventDefault()
     setDecision(active, 'approve')
-  } else if (e.key.toLowerCase() === 'r') {
+  } else if (key === 'r') {
     e.preventDefault()
     setDecision(active, 'reject')
+  } else if (key === 'q') {
+    e.preventDefault()
+    toggleQuickApproveView()
+  } else if (key === 'w') {
+    e.preventDefault()
+    toggleQuickRejectView()
   }
 })
 
