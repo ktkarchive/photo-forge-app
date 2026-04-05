@@ -10,10 +10,24 @@ for (const id of ids) {
   })
 }
 
+function syncBurstPresetButtons(v) {
+  document.querySelectorAll('.burstPreset').forEach((btn) => {
+    const pv = Number(btn.dataset.burst || 0)
+    btn.classList.toggle('active', Math.abs(pv - v) < 0.05)
+  })
+}
+
+function setBurstWindow(v, persist = true) {
+  const bw = Math.max(0.5, Math.min(5.0, Number(v || 1.5)))
+  $('burstWindow').value = bw.toFixed(1)
+  $('burstWindowVal').textContent = bw.toFixed(1)
+  syncBurstPresetButtons(bw)
+  if (persist) persistRecent()
+}
+
 $('burstWindow').addEventListener('input', () => {
   const v = Number($('burstWindow').value || 1.5)
-  $('burstWindowVal').textContent = v.toFixed(1)
-  persistRecent()
+  setBurstWindow(v)
 })
 
 const PRESET_KEY = 'photoforge.presets.v1'
@@ -99,9 +113,9 @@ function restoreRecent() {
       if (radio) radio.checked = true
     }
     if (typeof v.burstWindowSec !== 'undefined') {
-      const bw = Math.max(0.5, Math.min(5.0, Number(v.burstWindowSec || 1.5)))
-      $('burstWindow').value = bw.toFixed(1)
-      $('burstWindowVal').textContent = bw.toFixed(1)
+      setBurstWindow(v.burstWindowSec, false)
+    } else {
+      setBurstWindow(1.5, false)
     }
     if (v.levels || typeof v.compromise !== 'undefined') applyLevelSet({ ...(v.levels || {}), compromise: v.compromise ?? 0 })
   } catch {}
@@ -339,6 +353,13 @@ $('pickOutput').addEventListener('click', async () => {
 $('openOut').addEventListener('click', async () => {
   const p = $('outputDir').value.trim()
   if (p) await window.ktk.openPath(p)
+})
+
+document.querySelectorAll('.burstPreset').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const v = Number(btn.dataset.burst || 1.5)
+    setBurstWindow(v)
+  })
 })
 
 $('reviewFilter').addEventListener('change', () => {
