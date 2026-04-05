@@ -154,4 +154,8 @@ def compute_ahash(image_bgr: np.ndarray) -> int:
 
 
 def hamming_distance64(a: int, b: int) -> int:
-    return int((a ^ b).bit_count())
+    x = int(a) ^ int(b)
+    try:
+        return int(x.bit_count())
+    except AttributeError:
+        return bin(x).count("1")
