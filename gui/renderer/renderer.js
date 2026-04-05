@@ -191,6 +191,25 @@ function getActiveItem() {
   return found
 }
 
+function moveActiveBy(direction) {
+  const displayed = getDisplayedItems()
+  if (displayed.length === 0) return
+  let idx = displayed.findIndex((x) => x.file === activeFile)
+  if (idx < 0) idx = 0
+
+  const cols = 4
+  if (direction === 'left') idx -= 1
+  else if (direction === 'right') idx += 1
+  else if (direction === 'up') idx -= cols
+  else if (direction === 'down') idx += cols
+
+  if (idx < 0) idx = 0
+  if (idx >= displayed.length) idx = displayed.length - 1
+
+  activeFile = displayed[idx].file
+  renderReviewGrid()
+}
+
 function makeReviewCard(item) {
   const card = document.createElement('div')
   card.className = 'reviewCard'
@@ -462,22 +481,49 @@ document.addEventListener('keydown', (e) => {
 
   if (isTypingTarget) return
 
+  const key = e.key.toLowerCase()
+
+  if (key === 'arrowleft') {
+    e.preventDefault()
+    moveActiveBy('left')
+    return
+  }
+  if (key === 'arrowright') {
+    e.preventDefault()
+    moveActiveBy('right')
+    return
+  }
+  if (key === 'arrowup') {
+    e.preventDefault()
+    moveActiveBy('up')
+    return
+  }
+  if (key === 'arrowdown') {
+    e.preventDefault()
+    moveActiveBy('down')
+    return
+  }
+
+  if (key === 'q') {
+    e.preventDefault()
+    toggleQuickApproveView()
+    return
+  }
+  if (key === 'w') {
+    e.preventDefault()
+    toggleQuickRejectView()
+    return
+  }
+
   const active = getActiveItem()
   if (!active) return
 
-  const key = e.key.toLowerCase()
   if (key === 'a') {
     e.preventDefault()
     setDecision(active, 'approve')
   } else if (key === 'r') {
     e.preventDefault()
     setDecision(active, 'reject')
-  } else if (key === 'q') {
-    e.preventDefault()
-    toggleQuickApproveView()
-  } else if (key === 'w') {
-    e.preventDefault()
-    toggleQuickRejectView()
   }
 })
 
