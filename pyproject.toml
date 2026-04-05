@@ -18,7 +18,6 @@ dependencies = [
 [project.scripts]
 ktk-select = "ktk_select.cli:main"
 ktk.select = "ktk_select.cli:main"
-photo-culler = "ktk_select.cli:main"
 
 [tool.setuptools]
-packages = ["ktk_select", "photo_culler"]
+packages = ["ktk_select"]
