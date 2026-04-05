@@ -42,6 +42,7 @@ REJECT_REASON_PRIORITY = [
     ("focus_unavailable", "초점"),
     ("motion_blur", "블러"),
     ("exposure_bad", "노출"),
+    ("duplicate_exact:", "중복"),
     ("duplicate:", "중복"),
 ]
 
@@ -116,6 +117,42 @@ def _rule_levels_from_args(args) -> Dict[str, int]:
     }
 
 
+def _quality_penalty(reject_reasons: List[str], rule_levels: Dict[str, int]) -> int:
+    penalty = 0
+    joined = ";".join(reject_reasons)
+    if "eyes_closed" in joined:
+        penalty += int(rule_levels.get("eyes_closed", 0))
+    if "out_of_focus_subject" in joined:
+        penalty += int(rule_levels.get("out_of_focus_subject", 0))
+    if "motion_blur" in joined:
+        penalty += int(rule_levels.get("motion_blur", 0))
+    if "exposure_bad" in joined:
+        penalty += int(rule_levels.get("exposure_bad", 0))
+    return penalty
+
+
+def _is_better_representative(candidate: Dict, current: Dict, rule_levels: Dict[str, int]) -> bool:
+    # 낮은 penalty 우선, 동점이면 선명도/초점 지표가 더 좋은 컷 우선
+    cand_penalty = _quality_penalty(candidate.get("reject_reasons", []), rule_levels)
+    cur_penalty = _quality_penalty(current.get("reject_reasons", []), rule_levels)
+    if cand_penalty != cur_penalty:
+        return cand_penalty < cur_penalty
+
+    cand_scores = candidate.get("scores", {})
+    cur_scores = current.get("scores", {})
+    cand_blur = float(cand_scores.get("laplacian_var", 0.0))
+    cur_blur = float(cur_scores.get("laplacian_var", 0.0))
+    if cand_blur != cur_blur:
+        return cand_blur > cur_blur
+
+    cand_focus = float(cand_scores.get("focus_delta", 0.0))
+    cur_focus = float(cur_scores.get("focus_delta", 0.0))
+    if cand_focus != cur_focus:
+        return cand_focus > cur_focus
+
+    return str(candidate.get("file", "")) < str(current.get("file", ""))
+
+
 def run_command(args):
     input_dir = Path(args.input).expanduser().resolve()
     if not input_dir.exists() or not input_dir.is_dir():
@@ -160,21 +197,21 @@ def run_command(args):
         _ensure_dirs(output_dir)
 
     rows = []
-    seen_hashes: Dict[int, str] = {}
     ai_calls_used = 0
     file_conflict_skipped = 0
 
+    items: List[Dict] = []
     images = list(_iter_images(input_dir))
     for p in images:
         image = _load_image(p)
         if image is None:
-            rows.append(
+            items.append(
                 {
                     "file": str(p),
-                    "class": "review",
-                    "reject_reasons": "",
-                    "review_reasons": "load_failed",
-                    "scores": "{}",
+                    "reject_reasons": [],
+                    "review_reasons": ["load_failed"],
+                    "scores": {},
+                    "hash": None,
                 }
             )
             continue
@@ -207,17 +244,66 @@ def run_command(args):
                 scores["exposure_score"] = r.score
             _apply_check(r, reject_reasons, review_reasons)
 
-        if rules.duplicate:
-            ah = compute_ahash(image)
-            dup = False
-            for existing_h, existing_path in seen_hashes.items():
-                hd = hamming_distance64(ah, existing_h)
-                if hd <= thresholds.duplicate_hamming_max:
-                    dup = True
-                    reject_reasons.append(f"duplicate:{Path(existing_path).name}")
+        ah = compute_ahash(image) if rules.duplicate else None
+        items.append(
+            {
+                "file": str(p),
+                "reject_reasons": reject_reasons,
+                "review_reasons": review_reasons,
+                "scores": scores,
+                "hash": ah,
+            }
+        )
+
+    # duplicate는 버스트 그룹 단위로 대표컷(품질 우선) 1장만 남기고 나머지를 reject 처리
+    if rules.duplicate:
+        groups: List[Dict] = []
+        dup_threshold = int(thresholds.duplicate_hamming_max)
+
+        for idx, item in enumerate(items):
+            ah = item.get("hash")
+            if ah is None:
+                continue
+
+            matched = False
+            for g in groups:
+                rep_idx = g["rep_idx"]
+                rep_hash = items[rep_idx].get("hash")
+                if rep_hash is None:
+                    continue
+                hd = hamming_distance64(int(ah), int(rep_hash))
+                if hd <= dup_threshold:
+                    g["members"].append(idx)
+                    matched = True
+                    if _is_better_representative(item, items[rep_idx], rule_levels):
+                        g["rep_idx"] = idx
                     break
-            if not dup:
-                seen_hashes[ah] = str(p)
+
+            if not matched:
+                groups.append({"rep_idx": idx, "members": [idx]})
+
+        for g in groups:
+            members = g["members"]
+            if len(members) <= 1:
+                continue
+            rep_idx = g["rep_idx"]
+            rep_name = Path(items[rep_idx]["file"]).name
+            rep_hash = items[rep_idx].get("hash")
+            for idx in members:
+                if idx == rep_idx:
+                    continue
+                cur_hash = items[idx].get("hash")
+                hd = hamming_distance64(int(cur_hash), int(rep_hash)) if (cur_hash is not None and rep_hash is not None) else dup_threshold
+                if hd == 0:
+                    items[idx]["reject_reasons"].append(f"duplicate_exact:{rep_name}")
+                else:
+                    items[idx]["reject_reasons"].append(f"duplicate:{rep_name}:hd={hd}")
+
+    for item in items:
+        p = Path(item["file"])
+        reject_reasons = list(item.get("reject_reasons", []))
+        review_reasons = list(item.get("review_reasons", []))
+        scores = dict(item.get("scores", {}))
 
         if reject_reasons:
             klass = "reject"

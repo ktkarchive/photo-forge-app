@@ -92,7 +92,8 @@ function reasonFlags(rejectReasons) {
     초점: t.includes('out_of_focus_subject') || t.includes('focus_unavailable'),
     블러: t.includes('motion_blur'),
     노출: t.includes('exposure_bad'),
-    중복: t.includes('duplicate:'),
+    중복: t.includes('duplicate:') || t.includes('duplicate_exact:'),
+    중복완전일치: t.includes('duplicate_exact:'),
   }
 }
 
@@ -104,7 +105,7 @@ function reasonScores(item) {
     초점: f.초점 ? levels.out_of_focus_subject : 0,
     블러: f.블러 ? levels.motion_blur : 0,
     노출: f.노출 ? levels.exposure_bad : 0,
-    중복: f.중복 ? levels.duplicate : 0,
+    중복: f.중복완전일치 ? 3 : (f.중복 ? levels.duplicate : 0),
   }
 }
 

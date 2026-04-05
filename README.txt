@@ -48,6 +48,7 @@ ktk.select CLI (MVP)
 - output/summary.json
 - output/keep, output/review
 - output/reject/{눈감|초점|블러|노출|중복} (사유 우선순위 분류)
+- 중복은 버스트 그룹 대표컷 1장만 유지, 나머지 reject. 완전 동일 파일은 duplicate_exact 사유로 기록
 - report mode일 때는 파일 폴더 생성 없이 리포트만 생성
 
 config 사용

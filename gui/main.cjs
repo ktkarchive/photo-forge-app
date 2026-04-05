@@ -129,6 +129,7 @@ reason_priority = [
   ('focus_unavailable', '초점'),
   ('motion_blur', '블러'),
   ('exposure_bad', '노출'),
+  ('duplicate_exact:', '중복'),
   ('duplicate:', '중복'),
 ]
 
