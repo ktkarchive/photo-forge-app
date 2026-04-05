@@ -99,6 +99,10 @@
               <option value="name_desc">파일명 내림차순</option>
             </select>
           </label>
+          <label class="scoreFilterWrap">score ≥
+            <input id="reviewMinScore" type="range" min="0" max="15" value="0" />
+            <b id="reviewMinScoreVal">0</b>
+          </label>
           <span class="hotkeyHint">단축키: A=approve, R=reject, Enter=확인, Esc=취소</span>
         </div>
         <div id="reviewGrid" class="reviewGrid"></div>

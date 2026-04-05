@@ -18,6 +18,7 @@ const LEGACY_RECENT_KEY = 'ktk.select.recent.v1'
 let modalItems = []
 let reviewFilter = 'all'
 let reviewSort = 'score_desc'
+let reviewMinScore = 0
 let activeFile = ''
 
 const defaultPresets = {
@@ -140,13 +141,14 @@ function reasonChips(scores) {
 function refreshModalSummary() {
   const rejectCnt = modalItems.filter((x) => x.decision === 'reject').length
   const visible = getDisplayedItems().length
-  $('modalSummary').textContent = `${modalItems.length}건 (reject ${rejectCnt}, 표시 ${visible})`
+  $('modalSummary').textContent = `${modalItems.length}건 (reject ${rejectCnt}, 표시 ${visible}, score≥${reviewMinScore})`
 }
 
 function getDisplayedItems() {
   let items = [...modalItems]
   if (reviewFilter === 'approve') items = items.filter((x) => x.decision === 'approve')
   if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
+  items = items.filter((x) => itemScore(x) >= reviewMinScore)
 
   items.sort((a, b) => {
     const sa = itemScore(a)
@@ -240,8 +242,11 @@ function openModal(items) {
   modalItems = items
   reviewFilter = 'all'
   reviewSort = 'score_desc'
+  reviewMinScore = 0
   $('reviewFilter').value = reviewFilter
   $('reviewSort').value = reviewSort
+  $('reviewMinScore').value = String(reviewMinScore)
+  $('reviewMinScoreVal').textContent = String(reviewMinScore)
   activeFile = items[0]?.file || ''
   renderReviewGrid()
   $('reviewModal').classList.remove('hidden')
@@ -296,6 +301,12 @@ $('reviewFilter').addEventListener('change', () => {
 
 $('reviewSort').addEventListener('change', () => {
   reviewSort = $('reviewSort').value
+  renderReviewGrid()
+})
+
+$('reviewMinScore').addEventListener('input', () => {
+  reviewMinScore = Number($('reviewMinScore').value || 0)
+  $('reviewMinScoreVal').textContent = String(reviewMinScore)
   renderReviewGrid()
 })
 
