@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ktk-select"
+version = "0.1.0"
+description = "ktk.select photo auto culling CLI for macOS/Windows"
+readme = "README.txt"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "opencv-python>=4.8",
+  "mediapipe>=0.10",
+  "pyyaml>=6.0"
+]
+
+[project.scripts]
+ktk-select = "photo_culler.cli:main"
+ktk.select = "photo_culler.cli:main"
+photo-culler = "photo_culler.cli:main"
+
+[tool.setuptools]
+packages = ["photo_culler"]

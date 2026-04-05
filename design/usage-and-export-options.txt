@@ -1,0 +1,47 @@
+ktk.select 사용자 활용 방법 (권장)
+
+1) 불러오기
+- 입력: 한 폴더(재귀 포함) 또는 여러 폴더 선택
+- 파일 필터: jpg/jpeg/png/webp/tiff
+
+2) 제외 강도 설정 (항목별 0~3)
+- eyes_closed, subject_focus, blur, exposure, duplicate
+- 기본 권장: eyes=2, focus=2, blur=1, exposure=1, duplicate=0
+
+3) 분석 실행
+- 결과: keep/reject/review
+- 이유코드와 점수는 result.csv, summary.json에 저장
+
+4) 내보내기 방식(옵션)
+A. copy (권장 기본)
+- keep/reject/review 폴더로 복사
+- 원본 폴더는 유지(가장 안전)
+
+B. move
+- 결과 폴더로 이동
+- 원본 폴더에서 분류된 파일 제거됨
+
+C. metadata-only
+- 원본 파일은 유지
+- CSV/XMP/라벨만 기록(라이트룸/후속툴 연동용)
+
+D. hardlink(고급)
+- 원본 공간 중복 없이 결과 폴더 뷰 구성
+- 파일시스템 호환성 확인 필요
+
+5) 원본 폴더 처리 정책(중요)
+- keep_original: 원본 유지 (권장)
+- remove_classified: 분류된 파일 원본에서 제거
+- remove_reject_only: reject만 원본에서 제거
+- archive_processed: 처리 완료본을 archive 폴더로 이동
+
+6) 안전 옵션(강력 권장)
+- dry-run: 실제 복사/이동 없이 시뮬레이션
+- conflict_policy: rename/overwrite/skip
+- rollback_manifest: 작업 로그로 되돌리기 지원
+
+추천 기본 프리셋
+- export_mode=copy
+- source_policy=keep_original
+- dry_run=true(1회 검증 후 false)
+- conflict_policy=rename

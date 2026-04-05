@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Photo Culler - Carbon Dark Concept</title>
+  <style>
+    :root{
+      --bg:#161616; --bg2:#262626; --panel:#1f1f1f; --line:#393939;
+      --text:#f4f4f4; --sub:#c6c6c6; --muted:#8d8d8d;
+      --blue:#0f62fe; --teal:#08bdba; --red:#fa4d56; --green:#42be65; --yellow:#f1c21b;
+    }
+    *{box-sizing:border-box;font-family:Inter, Pretendard, -apple-system, Segoe UI, sans-serif}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .app{max-width:1400px;margin:20px auto;padding:16px}
+    .top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);border:1px solid var(--line)}
+    .brand{font-weight:700}.tag{color:var(--sub);font-size:13px}
+    .btn{padding:10px 14px;border:1px solid var(--line);background:#262626;color:var(--text)}
+    .btn.primary{background:var(--blue);border-color:var(--blue)}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:12px;margin-top:12px}
+    .card{background:var(--panel);border:1px solid var(--line);padding:14px}
+    h3{margin:0 0 12px 0;font-size:16px}
+    .row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+    .muted{color:var(--muted);font-size:12px}
+    .pill{padding:4px 8px;border:1px solid var(--line);font-size:12px}
+    .pill.keep{color:var(--green)} .pill.reject{color:var(--red)} .pill.review{color:var(--yellow)}
+    .levels{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
+    input[type="range"]{width:100%}
+    .mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    .radio{border:1px solid var(--line);padding:10px;background:#222}
+    .list{height:460px;overflow:auto;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:10px;border-bottom:1px solid #2a2a2a;text-align:left}
+    .status{display:flex;gap:8px}
+    .footer{display:flex;justify-content:space-between;margin-top:10px;color:var(--sub);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div>
+        <div class="brand">Photo Culler · IBM Carbon Dark</div>
+        <div class="tag">Stitch 주도 레이아웃 · Import → Analyze → Export</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn">폴더 불러오기</button>
+        <button class="btn">설정 프리셋</button>
+        <button class="btn primary">분석 시작</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>제외 강도(항목별 0~3)</h3>
+          <div class="levels"><div>눈감음</div><div class="pill">3 상</div></div>
+          <input type="range" min="0" max="3" value="3" />
+          <div class="levels"><div>피사체 초점</div><div class="pill">2 중</div></div>
+          <input type="range" min="0" max="3" value="2" />
+          <div class="levels"><div>블러</div><div class="pill">1 하</div></div>
+          <input type="range" min="0" max="3" value="1" />
+          <div class="levels"><div>노출불량</div><div class="pill">2 중</div></div>
+          <input type="range" min="0" max="3" value="2" />
+          <div class="levels"><div>중복컷</div><div class="pill">1 하</div></div>
+          <input type="range" min="0" max="3" value="1" />
+          <div class="muted" style="margin-top:10px">0=off, 1=하, 2=중, 3=상(가장 많이 제외)</div>
+        </div>
+
+        <div class="card" style="margin-top:10px">
+          <h3>내보내기 방식</h3>
+          <div class="mode">
+            <div class="radio">A. 폴더 분류<br><span class="muted">keep/reject/review 폴더 생성</span></div>
+            <div class="radio">B. 메타데이터 태깅<br><span class="muted">CSV/XMP/라벨만 기록</span></div>
+          </div>
+          <div style="margin-top:10px" class="muted">원본 처리: 유지 / 제외본만 이동 / keep만 이동</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>결과 미리보기</h3>
+        <div class="status">
+          <span class="pill keep">keep 324</span>
+          <span class="pill reject">reject 118</span>
+          <span class="pill review">review 41</span>
+        </div>
+        <div class="list" style="margin-top:10px">
+          <table>
+            <thead><tr><th>파일명</th><th>분류</th><th>사유</th><th>점수</th></tr></thead>
+            <tbody>
+              <tr><td>IMG_1021.JPG</td><td style="color:#fa4d56">reject</td><td>eyes_closed</td><td>EAR 0.14</td></tr>
+              <tr><td>IMG_1022.JPG</td><td style="color:#f1c21b">review</td><td>focus_unavailable:no_face</td><td>-</td></tr>
+              <tr><td>IMG_1023.JPG</td><td style="color:#42be65">keep</td><td>-</td><td>focus +18.4</td></tr>
+              <tr><td>IMG_1024.JPG</td><td style="color:#fa4d56">reject</td><td>motion_blur</td><td>lap 58</td></tr>
+              <tr><td>IMG_1025.JPG</td><td style="color:#fa4d56">reject</td><td>duplicate:IMG_1023</td><td>ham 4</td></tr>
+              <tr><td>IMG_1026.JPG</td><td style="color:#42be65">keep</td><td>-</td><td>exp 0.78</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="footer">
+          <div>Stitch Theme Lock: IBM Carbon Dark</div>
+          <div>Codex AI Recheck: smart (max 300 calls)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

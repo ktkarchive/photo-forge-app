@@ -1,0 +1,24 @@
+# 항목별 제외 강도 (0=off, 1=하, 2=중, 3=상)
+rule_levels:
+  eyes_closed: 2
+  out_of_focus_subject: 2
+  motion_blur: 2
+  exposure_bad: 2
+  duplicate: 0
+  occlusion: 0
+  composition_bad: 0
+
+# 필요 시 threshold 직접 조정
+thresholds:
+  eye_closed_ratio: 0.22
+  subject_focus_delta: -12.0
+  blur_var_min: 90
+  overexposed_ratio_max: 0.18
+  underexposed_ratio_max: 0.25
+  duplicate_hamming_max: 6
+
+ai:
+  mode: off
+  provider: codex
+  model: gpt-4.1-mini
+  max_calls_per_run: 0

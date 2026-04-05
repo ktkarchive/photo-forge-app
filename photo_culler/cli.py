@@ -1,0 +1,365 @@
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import shutil
+from dataclasses import asdict
+from pathlib import Path
+from typing import Dict, List
+
+from .config import (
+    AIConfig,
+    DEFAULT_RULE_LEVELS,
+    build_profile_from_rule_levels,
+    load_config_file,
+    merge_config_overrides,
+)
+
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+
+
+def _iter_images(input_dir: Path):
+    for p in input_dir.rglob("*"):
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS:
+            yield p
+
+
+def _load_image(path: Path):
+    try:
+        import cv2
+        import numpy as np
+    except Exception as e:  # pragma: no cover
+        raise RuntimeError("opencv-python, numpy 설치가 필요합니다: pip install -r requirements.txt") from e
+
+    img = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
+    return img
+
+
+def _ensure_dirs(output_dir: Path):
+    (output_dir / "keep").mkdir(parents=True, exist_ok=True)
+    (output_dir / "reject").mkdir(parents=True, exist_ok=True)
+    (output_dir / "review").mkdir(parents=True, exist_ok=True)
+
+
+def _apply_check(result, reject_reasons: List[str], review_reasons: List[str]):
+    if result.available is False:
+        if result.reason:
+            review_reasons.append(result.reason)
+        return
+    if result.passed is False and result.reason:
+        reject_reasons.append(result.reason)
+
+
+def _rule_levels_from_args(args) -> Dict[str, int]:
+    return {
+        "eyes_closed": args.eyes_level,
+        "out_of_focus_subject": args.focus_level,
+        "motion_blur": args.blur_level,
+        "exposure_bad": args.exposure_level,
+        "duplicate": args.duplicate_level,
+        "occlusion": args.occlusion_level,
+        "composition_bad": args.composition_level,
+    }
+
+
+def run_command(args):
+    input_dir = Path(args.input).expanduser().resolve()
+    if not input_dir.exists() or not input_dir.is_dir():
+        raise SystemExit(f"입력 폴더를 찾을 수 없습니다: {input_dir}")
+
+    output_dir = Path(args.output).expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    conf = load_config_file(args.config)
+
+    rule_levels = _rule_levels_from_args(args)
+    rules, thresholds, rule_levels = build_profile_from_rule_levels(rule_levels)
+    ai_conf = AIConfig(
+        mode=args.ai_mode,
+        provider=args.api_provider,
+        max_calls_per_run=args.max_ai_calls,
+        model=args.ai_model,
+    )
+
+    rules, thresholds, ai_conf, rule_levels = merge_config_overrides(
+        rules, thresholds, ai_conf, rule_levels, conf
+    )
+
+    try:
+        from .detectors import (
+            compute_ahash,
+            detect_exposure,
+            detect_eyes_closed_bymesh,
+            detect_motion_blur,
+            detect_subject_focus,
+            hamming_distance64,
+        )
+    except Exception as e:
+        raise SystemExit("opencv-python/mediapipe/numpy 설치 후 다시 실행해 주세요: pip install -r requirements.txt") from e
+
+    if not args.dry_run:
+        _ensure_dirs(output_dir)
+
+    rows = []
+    seen_hashes: Dict[int, str] = {}
+    ai_calls_used = 0
+
+    images = list(_iter_images(input_dir))
+    for p in images:
+        image = _load_image(p)
+        if image is None:
+            rows.append(
+                {
+                    "file": str(p),
+                    "class": "review",
+                    "reject_reasons": "",
+                    "review_reasons": "load_failed",
+                    "scores": "{}",
+                }
+            )
+            continue
+
+        reject_reasons: List[str] = []
+        review_reasons: List[str] = []
+        scores: Dict[str, float] = {}
+
+        if rules.eyes_closed:
+            r = detect_eyes_closed_bymesh(image, thresholds.eye_closed_ratio)
+            if r.score is not None:
+                scores["eyes_ear"] = r.score
+            _apply_check(r, reject_reasons, review_reasons)
+
+        if rules.out_of_focus_subject:
+            r = detect_subject_focus(image, thresholds.subject_focus_delta)
+            if r.score is not None:
+                scores["focus_delta"] = r.score
+            _apply_check(r, reject_reasons, review_reasons)
+
+        if rules.motion_blur:
+            r = detect_motion_blur(image, thresholds.blur_var_min)
+            if r.score is not None:
+                scores["laplacian_var"] = r.score
+            _apply_check(r, reject_reasons, review_reasons)
+
+        if rules.exposure_bad:
+            r = detect_exposure(image, thresholds.overexposed_ratio_max, thresholds.underexposed_ratio_max)
+            if r.score is not None:
+                scores["exposure_score"] = r.score
+            _apply_check(r, reject_reasons, review_reasons)
+
+        if rules.duplicate:
+            ah = compute_ahash(image)
+            dup = False
+            for existing_h, existing_path in seen_hashes.items():
+                hd = hamming_distance64(ah, existing_h)
+                if hd <= thresholds.duplicate_hamming_max:
+                    dup = True
+                    reject_reasons.append(f"duplicate:{Path(existing_path).name}")
+                    break
+            if not dup:
+                seen_hashes[ah] = str(p)
+
+        if reject_reasons:
+            klass = "reject"
+        elif review_reasons:
+            klass = "review"
+        else:
+            klass = "keep"
+
+        if ai_conf.mode in {"smart", "full"}:
+            should_ai = (ai_conf.mode == "full" and klass != "reject") or (ai_conf.mode == "smart" and klass == "review")
+            within_budget = ai_conf.max_calls_per_run <= 0 or ai_calls_used < ai_conf.max_calls_per_run
+            if should_ai and within_budget:
+                try:
+                    from .ai_reviewer import ai_review_image
+
+                    ai_decision, ai_reason = ai_review_image(p, model=ai_conf.model)
+                    ai_calls_used += 1
+                    scores["ai_used"] = 1.0
+                    if ai_decision == "reject" and klass != "reject":
+                        klass = "reject"
+                        reject_reasons.append(ai_reason)
+                    elif ai_decision == "keep" and klass == "review":
+                        klass = "keep"
+                    elif ai_decision == "review":
+                        if klass != "reject":
+                            klass = "review"
+                        review_reasons.append(ai_reason)
+                except Exception as e:
+                    review_reasons.append(f"ai_error:{e.__class__.__name__}")
+
+        rows.append(
+            {
+                "file": str(p),
+                "class": klass,
+                "reject_reasons": ";".join(reject_reasons),
+                "review_reasons": ";".join(review_reasons),
+                "scores": json.dumps(scores, ensure_ascii=False),
+            }
+        )
+
+        if not args.dry_run:
+            target = output_dir / klass / p.name
+            if args.move:
+                shutil.move(str(p), str(target))
+            else:
+                shutil.copy2(str(p), str(target))
+
+    result_csv = output_dir / "result.csv"
+    with result_csv.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["file", "class", "reject_reasons", "review_reasons", "scores"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+    summary = {
+        "input": str(input_dir),
+        "output": str(output_dir),
+        "dry_run": args.dry_run,
+        "rule_levels": rule_levels,
+        "total": len(rows),
+        "keep": sum(1 for r in rows if r["class"] == "keep"),
+        "reject": sum(1 for r in rows if r["class"] == "reject"),
+        "review": sum(1 for r in rows if r["class"] == "review"),
+        "rules": asdict(rules),
+        "thresholds": asdict(thresholds),
+        "ai": {
+            "mode": ai_conf.mode,
+            "provider": ai_conf.provider,
+            "model": ai_conf.model,
+            "max_ai_calls": ai_conf.max_calls_per_run,
+            "ai_calls_used": ai_calls_used,
+        },
+    }
+    summary_json = output_dir / "summary.json"
+    summary_json.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"완료: total={summary['total']} keep={summary['keep']} reject={summary['reject']} review={summary['review']}")
+    print(f"리포트: {result_csv}")
+    print(f"요약: {summary_json}")
+
+
+def explain_command(args):
+    p = Path(args.file).expanduser().resolve()
+    if not p.exists() or not p.is_file():
+        raise SystemExit(f"파일을 찾을 수 없습니다: {p}")
+
+    image = _load_image(p)
+    if image is None:
+        print(json.dumps({"file": str(p), "error": "load_failed"}, ensure_ascii=False, indent=2))
+        return
+
+    try:
+        from .detectors import (
+            detect_exposure,
+            detect_eyes_closed_bymesh,
+            detect_motion_blur,
+            detect_subject_focus,
+        )
+    except Exception as e:
+        raise SystemExit("opencv-python/mediapipe/numpy 설치 후 다시 실행해 주세요: pip install -r requirements.txt") from e
+
+    conf = load_config_file(args.config)
+    rule_levels = _rule_levels_from_args(args)
+    rules, thresholds, rule_levels = build_profile_from_rule_levels(rule_levels)
+    ai_conf = AIConfig()
+    rules, thresholds, _, rule_levels = merge_config_overrides(rules, thresholds, ai_conf, rule_levels, conf)
+
+    out = {
+        "file": str(p),
+        "rule_levels": rule_levels,
+        "rules": asdict(rules),
+        "checks": {},
+    }
+
+    if rules.eyes_closed:
+        r = detect_eyes_closed_bymesh(image, thresholds.eye_closed_ratio)
+        out["checks"]["eyes_closed"] = {
+            "level": rule_levels["eyes_closed"],
+            "available": r.available,
+            "score": r.score,
+            "passed": r.passed,
+            "reason": r.reason,
+            "detail": r.detail,
+        }
+
+    if rules.out_of_focus_subject:
+        r = detect_subject_focus(image, thresholds.subject_focus_delta)
+        out["checks"]["out_of_focus_subject"] = {
+            "level": rule_levels["out_of_focus_subject"],
+            "available": r.available,
+            "score": r.score,
+            "passed": r.passed,
+            "reason": r.reason,
+            "detail": r.detail,
+        }
+
+    if rules.motion_blur:
+        r = detect_motion_blur(image, thresholds.blur_var_min)
+        out["checks"]["motion_blur"] = {
+            "level": rule_levels["motion_blur"],
+            "available": r.available,
+            "score": r.score,
+            "passed": r.passed,
+            "reason": r.reason,
+            "detail": r.detail,
+        }
+
+    if rules.exposure_bad:
+        r = detect_exposure(image, thresholds.overexposed_ratio_max, thresholds.underexposed_ratio_max)
+        out["checks"]["exposure_bad"] = {
+            "level": rule_levels["exposure_bad"],
+            "available": r.available,
+            "score": r.score,
+            "passed": r.passed,
+            "reason": r.reason,
+            "detail": r.detail,
+        }
+
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+
+
+def add_rule_level_args(parser):
+    parser.add_argument("--eyes-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["eyes_closed"], help="눈감음 제외 강도")
+    parser.add_argument("--focus-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["out_of_focus_subject"], help="피사체 초점 제외 강도")
+    parser.add_argument("--blur-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["motion_blur"], help="블러 제외 강도")
+    parser.add_argument("--exposure-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["exposure_bad"], help="노출불량 제외 강도")
+    parser.add_argument("--duplicate-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["duplicate"], help="중복컷 제외 강도")
+    parser.add_argument("--occlusion-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["occlusion"], help="가림 제외 강도(예비)")
+    parser.add_argument("--composition-level", type=int, choices=[0, 1, 2, 3], default=DEFAULT_RULE_LEVELS["composition_bad"], help="구도 제외 강도(예비)")
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="ktk.select", description="ktk.select 사진 자동 셀렉 CLI")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    run = sub.add_parser("run", help="폴더 단위 자동 분류")
+    run.add_argument("--input", required=True, help="입력 사진 폴더")
+    run.add_argument("--output", required=True, help="출력 폴더")
+    add_rule_level_args(run)
+    run.add_argument("--config", default="", help="설정 파일(config.yaml)")
+    run.add_argument("--dry-run", action="store_true", help="파일 복사/이동 없이 리포트만 생성")
+    run.add_argument("--move", action="store_true", help="copy 대신 move")
+    run.add_argument("--ai-mode", choices=["off", "smart", "full"], default="off")
+    run.add_argument("--api-provider", default="codex")
+    run.add_argument("--ai-model", default="gpt-4.1-mini")
+    run.add_argument("--max-ai-calls", type=int, default=0)
+    run.set_defaults(func=run_command)
+
+    explain = sub.add_parser("explain", help="단일 파일 판정 근거 출력")
+    explain.add_argument("--file", required=True, help="이미지 파일 경로")
+    add_rule_level_args(explain)
+    explain.add_argument("--config", default="", help="설정 파일(config.yaml)")
+    explain.set_defaults(func=explain_command)
+
+    return parser
+
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
