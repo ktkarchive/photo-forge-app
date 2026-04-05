@@ -45,5 +45,11 @@ config 사용
 
 참고
 - eyes_closed는 mediapipe 설치 시 EAR 기반 계산
-- mediapipe 미설치 시 eyes_closed는 review 사유로 처리
+- mediapipe 미설치/오류 시 eyes_closed는 review 사유로 처리
 - AI 재판정은 OPENAI_API_KEY 또는 CODEX_API_KEY가 있으면 동작
+
+베타 준비 문서
+- QA 체크리스트: QA_CHECKLIST_MACOS_BETA.md
+- 샘플셋 표준: tests/samplesets/README.md
+- RC 빌드 스크립트: scripts/build_rc_mac.sh
+  - 예: scripts/build_rc_mac.sh 0.1.0-rc1

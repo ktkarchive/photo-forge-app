@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Local envs
+.venv/
+.venv_rc/
+
+# Build/release artifacts
+build/
+dist/
+*.egg-info/
+release/
+
+# macOS
+.DS_Store
