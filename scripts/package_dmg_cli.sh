@@ -26,7 +26,7 @@ tar \
 cat > "$APP_DIR/install.command" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-BASE="$HOME/.ktk-select"
+BASE="$HOME/.photo-forge"
 APP="$BASE/app"
 VENV="$BASE/venv"
 SRC_TGZ="$(cd "$(dirname "$0")" && pwd)/photo-forge-src.tar.gz"
@@ -54,7 +54,7 @@ EOF
 cat > "$APP_DIR/run.command" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-BASE="$HOME/.ktk-select"
+BASE="$HOME/.photo-forge"
 APP="$BASE/app"
 VENV="$BASE/venv"
 

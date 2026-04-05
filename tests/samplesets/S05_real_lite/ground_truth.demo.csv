@@ -1,7 +1,7 @@
 file,gt_class,eyes_closed_gt,focus_subject_gt,blur_gt,exposure_bad_gt,duplicate_gt,comment
-/Users/teykim/workspace_for_agent/ktk-select/tests/samplesets/S05_real_lite/input/s05_real_5.jpg,reject,1,0,1,1,0,auto-derived demo label
-/Users/teykim/workspace_for_agent/ktk-select/tests/samplesets/S05_real_lite/input/s05_real_4.jpg,reject,1,0,1,1,1,auto-derived demo label
-/Users/teykim/workspace_for_agent/ktk-select/tests/samplesets/S05_real_lite/input/s05_real_6.jpg,reject,1,0,1,1,1,auto-derived demo label
-/Users/teykim/workspace_for_agent/ktk-select/tests/samplesets/S05_real_lite/input/s05_real_3.jpg,reject,1,0,1,1,1,auto-derived demo label
-/Users/teykim/workspace_for_agent/ktk-select/tests/samplesets/S05_real_lite/input/s05_real_2.jpg,reject,1,0,1,1,1,auto-derived demo label
-/Users/teykim/workspace_for_agent/ktk-select/tests/samplesets/S05_real_lite/input/s05_real_1.jpg,reject,1,0,1,1,0,auto-derived demo label
+/Users/teykim/workspace_for_agent/photo-forge/tests/samplesets/S05_real_lite/input/s05_real_5.jpg,reject,1,0,1,1,0,auto-derived demo label
+/Users/teykim/workspace_for_agent/photo-forge/tests/samplesets/S05_real_lite/input/s05_real_4.jpg,reject,1,0,1,1,1,auto-derived demo label
+/Users/teykim/workspace_for_agent/photo-forge/tests/samplesets/S05_real_lite/input/s05_real_6.jpg,reject,1,0,1,1,1,auto-derived demo label
+/Users/teykim/workspace_for_agent/photo-forge/tests/samplesets/S05_real_lite/input/s05_real_3.jpg,reject,1,0,1,1,1,auto-derived demo label
+/Users/teykim/workspace_for_agent/photo-forge/tests/samplesets/S05_real_lite/input/s05_real_2.jpg,reject,1,0,1,1,1,auto-derived demo label
+/Users/teykim/workspace_for_agent/photo-forge/tests/samplesets/S05_real_lite/input/s05_real_1.jpg,reject,1,0,1,1,0,auto-derived demo label
