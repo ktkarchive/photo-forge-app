@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ktk.select</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div>
+          <h1>ktk.select</h1>
+          <p>Stitch-guided IBM Carbon Dark · 인간 친화형 단순 레이아웃</p>
+        </div>
+      </header>
+
+      <main class="card">
+        <div class="row">
+          <label>입력 폴더</label>
+          <div class="field">
+            <input id="inputDir" placeholder="/path/to/photos" />
+            <button id="pickInput">찾기</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>출력 폴더</label>
+          <div class="field">
+            <input id="outputDir" placeholder="/path/to/output" />
+            <button id="pickOutput">찾기</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="level"><span>눈감음</span><input id="eyes" type="range" min="0" max="3" value="2" /><b id="eyesVal">2</b></div>
+          <div class="level"><span>피사체 초점</span><input id="focus" type="range" min="0" max="3" value="2" /><b id="focusVal">2</b></div>
+          <div class="level"><span>흔들림</span><input id="blur" type="range" min="0" max="3" value="1" /><b id="blurVal">1</b></div>
+          <div class="level"><span>노출 불량</span><input id="exposure" type="range" min="0" max="3" value="1" /><b id="exposureVal">1</b></div>
+          <div class="level"><span>중복</span><input id="dup" type="range" min="0" max="3" value="1" /><b id="dupVal">1</b></div>
+        </div>
+
+        <div class="options">
+          <label><input id="dryRun" type="checkbox" checked /> dry-run(원본 미변경)</label>
+          <label><input id="move" type="checkbox" /> move 모드</label>
+        </div>
+
+        <div class="actions">
+          <button id="runBtn" class="primary">분석 실행</button>
+          <button id="openOut">출력 폴더 열기</button>
+        </div>
+
+        <pre id="log"></pre>
+      </main>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>

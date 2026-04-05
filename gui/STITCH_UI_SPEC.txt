@@ -1,0 +1,11 @@
+ktk.select GUI Stitch MCP Guided Spec
+
+- Theme: IBM Carbon Dark tone (#161616 background, subtle gray panels)
+- Layout: simple human-first (single main workspace, short mouse travel)
+- Priority Actions: Input folder, Output folder, Rule levels, Run, Export CSV open
+- Typography: high-contrast labels, low cognitive load
+- UX Rule: show only essential controls by default
+- Feedback: clear progress + summary counts (total/keep/reject/review)
+
+Stitch prompt seed:
+"Design a macOS desktop photo culling UI for ktk.select. Use IBM Carbon dark style, simple one-column task flow, strong contrast, minimal controls, and clear action hierarchy for non-programmer users."

@@ -1,0 +1,42 @@
+{
+  "name": "ktk-select-gui",
+  "version": "0.1.0-beta1",
+  "private": true,
+  "description": "ktk.select macOS GUI (Stitch-guided Carbon Dark)",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "electron .",
+    "pack:mac:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
+    "stitch:spec": "cat STITCH_UI_SPEC.txt"
+  },
+  "devDependencies": {
+    "electron": "^37.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.ktk.select.gui",
+    "productName": "ktk.select",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "renderer/**/*",
+      "../ktk_select/**/*",
+      "../requirements.txt"
+    ],
+    "extraMetadata": {
+      "main": "main.cjs"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "artifactName": "ktk.select-gui-${version}-${arch}.${ext}",
+      "category": "public.app-category.photography",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    }
+  }
+}
