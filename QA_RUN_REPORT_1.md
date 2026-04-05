@@ -1,4 +1,4 @@
-# ktk.select QA 1차 실행 리포트 (2026-04-05 19:01:54)
+# Photo Forge QA 1차 실행 리포트 (2026-04-05 19:01:54)
 
 조건: synthetic sampleset, dry-run, eyes=2 focus=2 blur=1 exposure=1 duplicate=1
 

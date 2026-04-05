@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ktk.select macOS RC artifact builder (CLI first)
+# Photo Forge macOS RC artifact builder (CLI first)
 # Usage: scripts/build_rc_mac.sh [version]
 
 VERSION="${1:-0.1.0-rc1}"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$ROOT_DIR/release"
-STAGE_DIR="$OUT_DIR/ktk-select-$VERSION-macos"
+STAGE_DIR="$OUT_DIR/photo-forge-$VERSION-macos"
 VENV_DIR="$ROOT_DIR/.venv_rc"
 
 mkdir -p "$OUT_DIR"
@@ -33,13 +33,13 @@ python3 -m ktk_select.cli "$@"
 EOF
 chmod +x "$STAGE_DIR/run.sh"
 
-ARCHIVE="$OUT_DIR/ktk-select-$VERSION-macos.tar.gz"
-tar -czf "$ARCHIVE" -C "$OUT_DIR" "ktk-select-$VERSION-macos"
+ARCHIVE="$OUT_DIR/photo-forge-$VERSION-macos.tar.gz"
+tar -czf "$ARCHIVE" -C "$OUT_DIR" "photo-forge-$VERSION-macos"
 
-cat > "$OUT_DIR/ktk-select-$VERSION-SHA256.txt" <<EOF
+cat > "$OUT_DIR/photo-forge-$VERSION-SHA256.txt" <<EOF
 $(shasum -a 256 "$ARCHIVE")
 EOF
 
 echo "RC build done"
 echo "archive: $ARCHIVE"
-echo "checksum: $OUT_DIR/ktk-select-$VERSION-SHA256.txt"
+echo "checksum: $OUT_DIR/photo-forge-$VERSION-SHA256.txt"

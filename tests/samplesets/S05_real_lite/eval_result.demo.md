@@ -1,4 +1,4 @@
-# ktk.select 평가 리포트
+# Photo Forge 평가 리포트
 
 - labeled_class_count: 6
 - class_accuracy: 1.0000

@@ -1,4 +1,4 @@
-ktk.select macOS Beta QA Checklist
+Photo Forge macOS Beta QA Checklist
 
 목적
 - 2026-04-12 베타 배포 전 필수 품질 게이트를 점검한다.

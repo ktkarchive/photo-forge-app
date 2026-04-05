@@ -1,4 +1,4 @@
-ktk.select 실인물 평가 가이드 (4차)
+Photo Forge 실인물 평가 가이드 (4차)
 
 목적
 - 실인물 샘플에서 분류 품질(keep/reject/review)과 규칙별 성능(eyes/focus/blur/exposure/duplicate)을 정량 평가

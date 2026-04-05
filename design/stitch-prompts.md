@@ -1,4 +1,4 @@
-ktk.select · Stitch Prompt Pack (IBM Carbon Dark)
+Photo Forge · Stitch Prompt Pack (IBM Carbon Dark)
 
 원칙
 - Layout/Color source-of-truth는 Stitch 프로젝트/스크린
@@ -6,7 +6,7 @@ ktk.select · Stitch Prompt Pack (IBM Carbon Dark)
 - 수동 CSS 변경은 최소화(컴포넌트 치환 수준)
 
 Prompt A (메인 작업화면)
-Design a desktop app screen for "ktk.select" using IBM Carbon Design System dark theme.
+Design a desktop app screen for "Photo Forge" using IBM Carbon Design System dark theme.
 Use a wide 16:9 macOS window layout.
 Left panel: import controls and per-rule exclusion strength sliders (0 off, 1 low, 2 medium, 3 high) for eyes_closed, subject_focus, blur, exposure, duplicate.
 Center-right panel: sortable results table with columns filename, decision(keep/reject/review), reasons, score.
@@ -15,7 +15,7 @@ Bottom status: total, keep, reject, review counts and AI review usage.
 Keep typography clean, dense, professional, minimal clutter.
 
 Prompt B (내보내기 설정 모달)
-Create a modal dialog for ktk.select export options in IBM Carbon dark theme.
+Create a modal dialog for Photo Forge export options in IBM Carbon dark theme.
 Sections:
 1) Export mode: copy / move / metadata-only / hardlink.
 2) Folder mapping: keep, reject, review destination paths.
@@ -24,6 +24,6 @@ Sections:
 Primary CTA: "Export" secondary: "Save preset".
 
 Prompt C (초보자 온보딩)
-Create a 3-step onboarding wizard for ktk.select (Carbon dark):
+Create a 3-step onboarding wizard for Photo Forge (Carbon dark):
 Step1 import, Step2 set rule strengths, Step3 export mode.
 Use concise Korean labels and helper text for beginners.

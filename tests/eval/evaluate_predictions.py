@@ -40,7 +40,7 @@ def binary_metrics(tp, fp, fn):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Evaluate ktk.select predictions against ground truth labels")
+    ap = argparse.ArgumentParser(description="Evaluate Photo Forge predictions against ground truth labels")
     ap.add_argument("--pred", required=True, help="result.csv path")
     ap.add_argument("--gt", required=True, help="ground_truth.csv path")
     ap.add_argument("--out-json", default="", help="output json path")
@@ -158,7 +158,7 @@ def main():
     out_json.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
     lines = []
-    lines.append("# ktk.select 평가 리포트")
+    lines.append("# Photo Forge 평가 리포트")
     lines.append("")
     lines.append(f"- labeled_class_count: {result['summary']['labeled_class_count']}")
     lines.append(f"- class_accuracy: {result['summary']['class_accuracy']:.4f}")

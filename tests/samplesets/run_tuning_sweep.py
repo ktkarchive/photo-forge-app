@@ -92,7 +92,7 @@ def main():
         }
 
     lines = []
-    lines.append("# ktk.select QA 튜닝 리포트 3차")
+    lines.append("# Photo Forge QA 튜닝 리포트 3차")
     lines.append("")
     lines.append("범위: S01~S05, dry-run, 프로파일 3종 비교")
     lines.append("")
