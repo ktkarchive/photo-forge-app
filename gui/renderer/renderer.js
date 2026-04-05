@@ -8,6 +8,7 @@ for (const id of ids) {
   el.addEventListener('input', () => {
     out.textContent = el.value
     persistRecent()
+    if (id === 'burstLevel') updateSelectionDetail(getActiveItem())
   })
 }
 
@@ -140,6 +141,26 @@ function sumScore(sc) {
 
 function itemScore(item) {
   return sumScore(reasonScores(item))
+}
+
+function updateSelectionDetail(item) {
+  if (!item) {
+    $('detailName').textContent = '-'
+    $('detailPath').textContent = '-'
+    $('detailDecision').textContent = '-'
+    $('detailScore').textContent = '-'
+    $('detailBurst').textContent = '-'
+    $('detailReason').textContent = '-'
+    return
+  }
+
+  const name = item.file.split('/').pop()
+  $('detailName').textContent = name
+  $('detailPath').textContent = item.file
+  $('detailDecision').textContent = item.decision || '-'
+  $('detailScore').textContent = String(itemScore(item))
+  $('detailBurst').textContent = `${$('burstLevel').value} (${burstLevelToSec($('burstLevel').value)}s)`
+  $('detailReason').textContent = item.reject_reasons || item.review_reasons || '-'
 }
 
 function reasonChips(scores) {
@@ -284,6 +305,7 @@ function renderReviewGrid() {
   grid.innerHTML = ''
   items.forEach((it) => grid.appendChild(makeReviewCard(it)))
   refreshModalSummary()
+  updateSelectionDetail(getActiveItem())
 }
 
 function openReview(items) {
@@ -306,6 +328,7 @@ function openReview(items) {
 function closeReview() {
   $('reviewPanel').classList.add('hidden')
   $('emptyCenter').classList.remove('hidden')
+  updateSelectionDetail(null)
 }
 
 function openSettings() {

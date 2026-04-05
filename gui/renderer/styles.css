@@ -174,8 +174,35 @@ body {
   flex-direction: column;
 }
 
+.selectionDetail {
+  margin: 10px;
+  padding: 10px;
+  border: 1px solid #303030;
+  border-radius: 10px;
+  background: #171717;
+  display: grid;
+  gap: 6px;
+}
+.selectionDetail .kv {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.selectionDetail .kv span {
+  color: #a8a8a8;
+  font-size: 11px;
+}
+.selectionDetail .kv b {
+  color: #f4f4f4;
+  font-size: 12px;
+  word-break: break-all;
+  font-weight: 500;
+}
+
 #log {
-  margin: 0;
+  margin: 10px;
+  margin-top: 0;
   flex: 1;
   padding: 12px;
   white-space: pre-wrap;
@@ -183,6 +210,8 @@ body {
   color: #d0e2ff;
   overflow: auto;
   background: #131313;
+  border: 1px solid #303030;
+  border-radius: 10px;
 }
 
 .settingsModal {
