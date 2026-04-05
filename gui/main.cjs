@@ -68,8 +68,7 @@ ipcMain.handle('run-culler', async (_evt, payload) => {
   args.push('--occlusion-level', String(payload.levels?.occlusion ?? 0))
   args.push('--composition-level', String(payload.levels?.composition_bad ?? 0))
 
-  if (payload.dryRun) args.push('--dry-run')
-  if (payload.move) args.push('--move')
+  args.push('--export-mode', String(payload.exportMode || 'copy'))
 
   const prep = await ensurePythonDeps(root)
   if (!prep.ok) {

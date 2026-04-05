@@ -33,11 +33,12 @@ $('runBtn').addEventListener('click', async () => {
   $('runBtn').disabled = true
   $('log').textContent = '실행 중...'
 
+  const exportMode = document.querySelector('input[name="exportMode"]:checked')?.value || 'copy'
+
   const payload = {
     inputDir,
     outputDir,
-    dryRun: $('dryRun').checked,
-    move: $('move').checked,
+    exportMode,
     levels: {
       eyes_closed: Number($('eyes').value),
       out_of_focus_subject: Number($('focus').value),

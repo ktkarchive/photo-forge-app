@@ -27,8 +27,14 @@ ktk.select CLI (MVP)
   python -m ktk_select.cli run --input ./photos --output ./out \
     --ai-mode smart --api-provider codex --ai-model gpt-4.1-mini --max-ai-calls 300
 
-- 파일 이동 없이 리포트만
-  python -m ktk_select.cli run --input ./photos --output ./out --dry-run
+- report mode(리포트만 생성, 파일 복사/이동 없음)
+  python -m ktk_select.cli run --input ./photos --output ./out --export-mode report
+
+- copy mode(기본: 원본 유지 + 출력 폴더 복사)
+  python -m ktk_select.cli run --input ./photos --output ./out --export-mode copy
+
+- move mode(원본을 출력 폴더로 이동)
+  python -m ktk_select.cli run --input ./photos --output ./out --export-mode move
 
 - 단일 파일 설명
   python -m ktk_select.cli explain --file ./photos/IMG_0001.JPG --eyes-level 2 --focus-level 2
@@ -36,7 +42,9 @@ ktk.select CLI (MVP)
 출력물
 - output/result.csv
 - output/summary.json
-- output/keep, output/reject, output/review (dry-run이면 미생성)
+- output/keep, output/review
+- output/reject/{눈감음|초점|흔들림|노출|중복|기타} (사유 우선순위 분류)
+- report mode일 때는 파일 폴더 생성 없이 리포트만 생성
 
 config 사용
 - config.example.yaml 복사 후 수정

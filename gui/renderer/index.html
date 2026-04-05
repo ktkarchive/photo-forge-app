@@ -41,8 +41,9 @@
         </div>
 
         <div class="options">
-          <label><input id="dryRun" type="checkbox" checked /> dry-run(원본 미변경)</label>
-          <label><input id="move" type="checkbox" /> move 모드</label>
+          <label><input name="exportMode" type="radio" value="report" /> report mode(리포트만)</label>
+          <label><input name="exportMode" type="radio" value="copy" checked /> copy mode(원본 유지 + 출력 폴더 복사)</label>
+          <label><input name="exportMode" type="radio" value="move" /> move mode(원본 이동)</label>
         </div>
 
         <div class="actions">

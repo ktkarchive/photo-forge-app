@@ -15,3 +15,4 @@ UI/UX 원칙
 - Stitch-guided + IBM Carbon Dark 톤
 - 단순 레이아웃(입력/출력/레벨/실행)
 - 마우스 동선 최소화
+- Export 모드 3종: report / copy / move

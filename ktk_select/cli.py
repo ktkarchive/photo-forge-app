@@ -36,10 +36,44 @@ def _load_image(path: Path):
     return img
 
 
+REJECT_REASON_PRIORITY = [
+    ("eyes_closed", "눈감음"),
+    ("out_of_focus_subject", "초점"),
+    ("focus_unavailable", "초점"),
+    ("motion_blur", "흔들림"),
+    ("exposure_bad", "노출"),
+    ("duplicate:", "중복"),
+]
+
+
 def _ensure_dirs(output_dir: Path):
     (output_dir / "keep").mkdir(parents=True, exist_ok=True)
     (output_dir / "reject").mkdir(parents=True, exist_ok=True)
     (output_dir / "review").mkdir(parents=True, exist_ok=True)
+    for _key, label in REJECT_REASON_PRIORITY:
+        (output_dir / "reject" / label).mkdir(parents=True, exist_ok=True)
+    (output_dir / "reject" / "기타").mkdir(parents=True, exist_ok=True)
+
+
+def _resolve_export_mode(args) -> str:
+    # backward compatibility flags take precedence
+    if getattr(args, "dry_run", False):
+        return "report"
+    if getattr(args, "move", False):
+        return "move"
+
+    mode = str(getattr(args, "export_mode", "copy") or "copy")
+    if mode not in {"report", "copy", "move"}:
+        return "copy"
+    return mode
+
+
+def _reject_bucket_label(reject_reasons: List[str]) -> str:
+    text = ";".join(reject_reasons)
+    for key, label in REJECT_REASON_PRIORITY:
+        if key in text:
+            return label
+    return "기타"
 
 
 def _apply_check(result, reject_reasons: List[str], review_reasons: List[str]):
@@ -98,7 +132,9 @@ def run_command(args):
     except Exception as e:
         raise SystemExit("opencv-python/mediapipe/numpy 설치 후 다시 실행해 주세요: pip install -r requirements.txt") from e
 
-    if not args.dry_run:
+    export_mode = _resolve_export_mode(args)
+
+    if export_mode != "report":
         _ensure_dirs(output_dir)
 
     rows = []
@@ -199,9 +235,14 @@ def run_command(args):
             }
         )
 
-        if not args.dry_run:
-            target = output_dir / klass / p.name
-            if args.move:
+        if export_mode != "report":
+            if klass == "reject":
+                reject_bucket = _reject_bucket_label(reject_reasons)
+                target = output_dir / "reject" / reject_bucket / p.name
+            else:
+                target = output_dir / klass / p.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if export_mode == "move":
                 shutil.move(str(p), str(target))
             else:
                 shutil.copy2(str(p), str(target))
@@ -215,7 +256,8 @@ def run_command(args):
     summary = {
         "input": str(input_dir),
         "output": str(output_dir),
-        "dry_run": args.dry_run,
+        "export_mode": export_mode,
+        "report_mode": export_mode == "report",
         "rule_levels": rule_levels,
         "total": len(rows),
         "keep": sum(1 for r in rows if r["class"] == "keep"),
@@ -338,8 +380,9 @@ def build_parser():
     run.add_argument("--output", required=True, help="출력 폴더")
     add_rule_level_args(run)
     run.add_argument("--config", default="", help="설정 파일(config.yaml)")
-    run.add_argument("--dry-run", action="store_true", help="파일 복사/이동 없이 리포트만 생성")
-    run.add_argument("--move", action="store_true", help="copy 대신 move")
+    run.add_argument("--export-mode", choices=["report", "copy", "move"], default="copy", help="출력 모드: report(리포트만), copy(복사), move(이동)")
+    run.add_argument("--dry-run", action="store_true", help="[호환] report 모드와 동일")
+    run.add_argument("--move", action="store_true", help="[호환] move 모드와 동일")
     run.add_argument("--ai-mode", choices=["off", "smart", "full"], default="off")
     run.add_argument("--api-provider", default="codex")
     run.add_argument("--ai-model", default="gpt-4.1-mini")
