@@ -72,13 +72,20 @@ def detect_eyes_closed_bymesh(image_bgr: np.ndarray, eye_closed_ratio: float) ->
     right_ear = _eye_aspect_ratio(right)
     ear = float((left_ear + right_ear) / 2.0)
 
-    is_closed = ear < eye_closed_ratio
+    # 측면 얼굴(프로파일)에서는 한쪽 눈 landmark 품질이 급격히 떨어져 false reject가 늘어남.
+    # 좌우 EAR 불균형이 큰 경우 눈감음 판정을 완화(통과 처리)한다.
+    lo = max(min(left_ear, right_ear), 1e-6)
+    hi = max(left_ear, right_ear)
+    asym_ratio = float(hi / lo)
+    profile_relaxed = asym_ratio >= 2.0
+
+    is_closed = (ear < eye_closed_ratio) and (not profile_relaxed)
     return CheckResult(
         available=True,
         score=ear,
         passed=not is_closed,
         reason="eyes_closed" if is_closed else None,
-        detail={"left_ear": left_ear, "right_ear": right_ear},
+        detail={"left_ear": left_ear, "right_ear": right_ear, "asym_ratio": asym_ratio, "profile_relaxed": profile_relaxed},
     )
 
 

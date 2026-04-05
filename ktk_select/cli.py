@@ -76,6 +76,26 @@ def _reject_bucket_label(reject_reasons: List[str]) -> str:
     return "기타"
 
 
+def _resolve_target_path(target: Path, conflict_policy: str) -> Path | None:
+    if not target.exists():
+        return target
+    if conflict_policy == "overwrite":
+        return target
+    if conflict_policy == "skip":
+        return None
+
+    # rename
+    stem = target.stem
+    suffix = target.suffix
+    parent = target.parent
+    i = 1
+    while True:
+        cand = parent / f"{stem}_{i}{suffix}"
+        if not cand.exists():
+            return cand
+        i += 1
+
+
 def _apply_check(result, reject_reasons: List[str], review_reasons: List[str]):
     if result.available is False:
         if result.reason:
@@ -134,12 +154,16 @@ def run_command(args):
 
     export_mode = _resolve_export_mode(args)
 
+    if export_mode == "move" and not getattr(args, "confirm_move", False):
+        raise SystemExit("move mode는 안전을 위해 --confirm-move 옵션이 필요합니다.")
+
     if export_mode != "report":
         _ensure_dirs(output_dir)
 
     rows = []
     seen_hashes: Dict[int, str] = {}
     ai_calls_used = 0
+    file_conflict_skipped = 0
 
     images = list(_iter_images(input_dir))
     for p in images:
@@ -242,10 +266,13 @@ def run_command(args):
             else:
                 target = output_dir / klass / p.name
             target.parent.mkdir(parents=True, exist_ok=True)
-            if export_mode == "move":
-                shutil.move(str(p), str(target))
+            resolved_target = _resolve_target_path(target, args.conflict_policy)
+            if resolved_target is None:
+                file_conflict_skipped += 1
+            elif export_mode == "move":
+                shutil.move(str(p), str(resolved_target))
             else:
-                shutil.copy2(str(p), str(target))
+                shutil.copy2(str(p), str(resolved_target))
 
     result_csv = output_dir / "result.csv"
     with result_csv.open("w", newline="", encoding="utf-8") as f:
@@ -272,6 +299,8 @@ def run_command(args):
             "max_ai_calls": ai_conf.max_calls_per_run,
             "ai_calls_used": ai_calls_used,
         },
+        "file_conflict_policy": args.conflict_policy,
+        "file_conflict_skipped": file_conflict_skipped,
     }
     summary_json = output_dir / "summary.json"
     summary_json.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -381,6 +410,8 @@ def build_parser():
     add_rule_level_args(run)
     run.add_argument("--config", default="", help="설정 파일(config.yaml)")
     run.add_argument("--export-mode", choices=["report", "copy", "move"], default="copy", help="출력 모드: report(리포트만), copy(복사), move(이동)")
+    run.add_argument("--conflict-policy", choices=["rename", "skip", "overwrite"], default="rename", help="동일 파일명 충돌 처리")
+    run.add_argument("--confirm-move", action="store_true", help="move 모드 실행 확인")
     run.add_argument("--dry-run", action="store_true", help="[호환] report 모드와 동일")
     run.add_argument("--move", action="store_true", help="[호환] move 모드와 동일")
     run.add_argument("--ai-mode", choices=["off", "smart", "full"], default="off")

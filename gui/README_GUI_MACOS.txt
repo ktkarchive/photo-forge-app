@@ -16,3 +16,5 @@ UI/UX 원칙
 - 단순 레이아웃(입력/출력/레벨/실행)
 - 마우스 동선 최소화
 - Export 모드 3종: report / copy / move
+- 충돌정책(rename/skip/overwrite), 프리셋 저장, 최근 설정 복원
+- 결과 검토 그리드(Reject/Review) + 재분류(overrides.json) 저장

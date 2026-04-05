@@ -69,6 +69,10 @@ ipcMain.handle('run-culler', async (_evt, payload) => {
   args.push('--composition-level', String(payload.levels?.composition_bad ?? 0))
 
   args.push('--export-mode', String(payload.exportMode || 'copy'))
+  args.push('--conflict-policy', String(payload.conflictPolicy || 'rename'))
+  if (String(payload.exportMode || 'copy') === 'move') {
+    args.push('--confirm-move')
+  }
 
   const prep = await ensurePythonDeps(root)
   if (!prep.ok) {
@@ -91,6 +95,51 @@ ipcMain.handle('open-path', async (_evt, p) => {
   if (!p) return false
   await shell.openPath(p)
   return true
+})
+
+ipcMain.handle('load-run-artifacts', async (_evt, outputDir) => {
+  const root = getProjectRoot()
+  const py = `
+import csv, json, pathlib, sys
+out = pathlib.Path(sys.argv[1])
+res = out / 'result.csv'
+sumj = out / 'summary.json'
+rows = []
+if res.exists():
+    with res.open('r', encoding='utf-8', newline='') as f:
+        rows = list(csv.DictReader(f))
+summary = {}
+if sumj.exists():
+    summary = json.loads(sumj.read_text(encoding='utf-8'))
+print(json.dumps({'rows': rows, 'summary': summary}, ensure_ascii=False))
+`
+  const got = await runProcess('python3', ['-c', py, outputDir], {
+    cwd: root,
+    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
+  })
+  if (got.code !== 0) return { ok: false, error: got.stderr || got.stdout }
+  try {
+    return { ok: true, ...(JSON.parse(got.stdout || '{}')) }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+
+ipcMain.handle('save-overrides', async (_evt, outputDir, overrides) => {
+  const root = getProjectRoot()
+  const py = `
+import json, pathlib, sys
+out = pathlib.Path(sys.argv[1])
+out.mkdir(parents=True, exist_ok=True)
+data = json.loads(sys.argv[2])
+(out / 'overrides.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+print(str(out / 'overrides.json'))
+`
+  const res = await runProcess('python3', ['-c', py, outputDir, JSON.stringify(overrides || {})], {
+    cwd: root,
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+  })
+  return { ok: res.code === 0, stdout: res.stdout, stderr: res.stderr }
 })
 
 app.whenReady().then(() => {

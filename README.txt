@@ -33,8 +33,12 @@ ktk.select CLI (MVP)
 - copy mode(기본: 원본 유지 + 출력 폴더 복사)
   python -m ktk_select.cli run --input ./photos --output ./out --export-mode copy
 
-- move mode(원본을 출력 폴더로 이동)
-  python -m ktk_select.cli run --input ./photos --output ./out --export-mode move
+- move mode(원본을 출력 폴더로 이동, 안전확인 필요)
+  python -m ktk_select.cli run --input ./photos --output ./out --export-mode move --confirm-move
+
+- 파일명 충돌 정책
+  python -m ktk_select.cli run --input ./photos --output ./out --export-mode copy --conflict-policy rename
+  (선택: rename | skip | overwrite)
 
 - 단일 파일 설명
   python -m ktk_select.cli explain --file ./photos/IMG_0001.JPG --eyes-level 2 --focus-level 2
