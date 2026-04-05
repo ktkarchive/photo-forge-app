@@ -112,14 +112,15 @@ function sumScore(sc) {
   return sc.눈감 + sc.초점 + sc.블러 + sc.노출 + sc.중복
 }
 
-function scoreLine(sc) {
-  return `눈감(${sc.눈감}) 초점(${sc.초점}) 블러(${sc.블러}) 노출(${sc.노출}) 중복(${sc.중복})`
-}
-
-function reasonChips(rejectReasons) {
-  const flags = reasonFlags(rejectReasons)
+function reasonChips(scores) {
+  const levelClass = (v) => {
+    if (v >= 3) return 'lv3'
+    if (v >= 2) return 'lv2'
+    if (v >= 1) return 'lv1'
+    return 'lv0'
+  }
   return ['눈감', '초점', '블러', '노출', '중복']
-    .map((x) => `<span class="chip ${flags[x] ? 'active' : ''}">${x}</span>`)
+    .map((x) => `<span class="chip ${levelClass(scores[x] || 0)}">${x}</span>`)
     .join('')
 }
 
@@ -139,11 +140,10 @@ function makeReviewCard(item) {
   img.onclick = () => window.ktk.openPath(item.file)
 
   const sc = reasonScores(item)
-  const total = sumScore(sc)
 
   const meta = document.createElement('div')
   meta.className = 'meta'
-  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="scoreline">${scoreLine(sc)} · 합계(${total})</div><div class="chips">${reasonChips(item.reject_reasons)}</div>`
+  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="chips">${reasonChips(sc)}</div>`
 
   const toggles = document.createElement('div')
   toggles.className = 'smallActions'
