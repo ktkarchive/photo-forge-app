@@ -56,8 +56,13 @@ button.primary { background: #0f62fe; border-color: #0f62fe; }
 .modalCard { width: min(1180px, 95vw); height: min(820px, 92vh); background: #1f1f1f; border: 1px solid #393939; border-radius: 12px; display: flex; flex-direction: column; padding: 12px; }
 .modalHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .modalHead h3 { margin: 0; }
+.reviewToolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.reviewToolbar label { display: flex; align-items: center; gap: 6px; color: #c6c6c6; font-size: 12px; }
+.reviewToolbar select { width: auto; min-width: 150px; padding: 6px 8px; }
+.hotkeyHint { font-size: 11px; color: #a8a8a8; }
 .reviewGrid { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 4px; }
 .reviewCard { border: 1px solid #3b3b3b; border-radius: 8px; background: #262626; padding: 8px; }
+.reviewCard.active-card { border-color: #0f62fe; box-shadow: 0 0 0 1px #0f62fe inset; }
 .thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d; cursor: pointer; }
 .meta { margin-top: 8px; }
 .filename { font-size: 12px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

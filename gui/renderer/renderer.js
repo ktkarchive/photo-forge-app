@@ -14,7 +14,11 @@ const PRESET_KEY = 'photoforge.presets.v1'
 const RECENT_KEY = 'photoforge.recent.v1'
 const LEGACY_PRESET_KEY = 'ktk.select.presets.v1'
 const LEGACY_RECENT_KEY = 'ktk.select.recent.v1'
+
 let modalItems = []
+let reviewFilter = 'all'
+let reviewSort = 'score_desc'
+let activeFile = ''
 
 const defaultPresets = {
   conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, compromise: 0 },
@@ -117,6 +121,10 @@ function sumScore(sc) {
   return sc.눈감 + sc.초점 + sc.블러 + sc.노출 + sc.중복
 }
 
+function itemScore(item) {
+  return sumScore(reasonScores(item))
+}
+
 function reasonChips(scores) {
   const levelClass = (v) => {
     if (v >= 3) return 'lv3'
@@ -131,12 +139,46 @@ function reasonChips(scores) {
 
 function refreshModalSummary() {
   const rejectCnt = modalItems.filter((x) => x.decision === 'reject').length
-  $('modalSummary').textContent = `${modalItems.length}건 (reject ${rejectCnt})`
+  const visible = getDisplayedItems().length
+  $('modalSummary').textContent = `${modalItems.length}건 (reject ${rejectCnt}, 표시 ${visible})`
+}
+
+function getDisplayedItems() {
+  let items = [...modalItems]
+  if (reviewFilter === 'approve') items = items.filter((x) => x.decision === 'approve')
+  if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
+
+  items.sort((a, b) => {
+    const sa = itemScore(a)
+    const sb = itemScore(b)
+    if (reviewSort === 'score_desc') return sb - sa || a.file.localeCompare(b.file)
+    if (reviewSort === 'score_asc') return sa - sb || a.file.localeCompare(b.file)
+    if (reviewSort === 'name_desc') return b.file.localeCompare(a.file)
+    return a.file.localeCompare(b.file)
+  })
+  return items
+}
+
+function setDecision(item, decision) {
+  item.decision = decision
+  renderReviewGrid()
+}
+
+function getActiveItem() {
+  const displayed = getDisplayedItems()
+  if (displayed.length === 0) return null
+  let found = displayed.find((x) => x.file === activeFile)
+  if (!found) {
+    found = displayed[0]
+    activeFile = found.file
+  }
+  return found
 }
 
 function makeReviewCard(item) {
   const card = document.createElement('div')
   card.className = 'reviewCard'
+  if (item.file === activeFile) card.classList.add('active-card')
 
   const img = document.createElement('img')
   img.className = 'thumb'
@@ -148,7 +190,7 @@ function makeReviewCard(item) {
 
   const meta = document.createElement('div')
   meta.className = 'meta'
-  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="chips">${reasonChips(sc)}</div>`
+  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()} · score ${itemScore(item)}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="chips">${reasonChips(sc)}</div>`
 
   const toggles = document.createElement('div')
   toggles.className = 'smallActions'
@@ -157,22 +199,25 @@ function makeReviewCard(item) {
   a.textContent = 'approve'
   r.textContent = 'reject'
 
-  const applyUI = () => {
-    a.classList.toggle('sel', item.decision === 'approve')
-    r.classList.toggle('sel', item.decision === 'reject')
+  a.classList.toggle('sel', item.decision === 'approve')
+  r.classList.toggle('sel', item.decision === 'reject')
+
+  card.onclick = () => {
+    activeFile = item.file
+    renderReviewGrid()
   }
 
-  a.onclick = () => {
-    item.decision = 'approve'
-    applyUI()
-    refreshModalSummary()
+  a.onclick = (e) => {
+    e.stopPropagation()
+    activeFile = item.file
+    setDecision(item, 'approve')
   }
-  r.onclick = () => {
-    item.decision = 'reject'
-    applyUI()
-    refreshModalSummary()
+
+  r.onclick = (e) => {
+    e.stopPropagation()
+    activeFile = item.file
+    setDecision(item, 'reject')
   }
-  applyUI()
 
   toggles.appendChild(a)
   toggles.appendChild(r)
@@ -183,11 +228,22 @@ function makeReviewCard(item) {
   return card
 }
 
+function renderReviewGrid() {
+  const items = getDisplayedItems()
+  const grid = $('reviewGrid')
+  grid.innerHTML = ''
+  items.forEach((it) => grid.appendChild(makeReviewCard(it)))
+  refreshModalSummary()
+}
+
 function openModal(items) {
   modalItems = items
-  $('reviewGrid').innerHTML = ''
-  items.forEach((it) => $('reviewGrid').appendChild(makeReviewCard(it)))
-  refreshModalSummary()
+  reviewFilter = 'all'
+  reviewSort = 'score_desc'
+  $('reviewFilter').value = reviewFilter
+  $('reviewSort').value = reviewSort
+  activeFile = items[0]?.file || ''
+  renderReviewGrid()
   $('reviewModal').classList.remove('hidden')
 }
 
@@ -231,6 +287,16 @@ $('pickOutput').addEventListener('click', async () => {
 $('openOut').addEventListener('click', async () => {
   const p = $('outputDir').value.trim()
   if (p) await window.ktk.openPath(p)
+})
+
+$('reviewFilter').addEventListener('change', () => {
+  reviewFilter = $('reviewFilter').value
+  renderReviewGrid()
+})
+
+$('reviewSort').addEventListener('change', () => {
+  reviewSort = $('reviewSort').value
+  renderReviewGrid()
 })
 
 $('cancelReview').addEventListener('click', () => {
@@ -284,8 +350,7 @@ $('runBtn').addEventListener('click', async () => {
   const compromise = Number(s.compromise || 0)
   const items = rows.map((r) => {
     const it = { ...r, _levels: s.levels }
-    const sc = reasonScores(it)
-    const total = sumScore(sc)
+    const total = itemScore(it)
     const hasAny = total > 0
     let decision = 'approve'
     if (hasAny && total > compromise) decision = 'reject'
@@ -298,5 +363,37 @@ $('runBtn').addEventListener('click', async () => {
 
 $('conflictPolicy').addEventListener('change', persistRecent)
 document.querySelectorAll('input[name="exportMode"]').forEach((r) => r.addEventListener('change', persistRecent))
+
+document.addEventListener('keydown', (e) => {
+  if ($('reviewModal').classList.contains('hidden')) return
+
+  const tag = (e.target?.tagName || '').toLowerCase()
+  const isTypingTarget = tag === 'input' || tag === 'textarea' || tag === 'select'
+
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    $('cancelReview').click()
+    return
+  }
+
+  if (e.key === 'Enter' && !isTypingTarget) {
+    e.preventDefault()
+    $('confirmReview').click()
+    return
+  }
+
+  if (isTypingTarget) return
+
+  const active = getActiveItem()
+  if (!active) return
+
+  if (e.key.toLowerCase() === 'a') {
+    e.preventDefault()
+    setDecision(active, 'approve')
+  } else if (e.key.toLowerCase() === 'r') {
+    e.preventDefault()
+    setDecision(active, 'reject')
+  }
+})
 
 restoreRecent()
