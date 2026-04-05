@@ -3,7 +3,35 @@ const path = require('path')
 const { spawn } = require('child_process')
 
 function getProjectRoot() {
-  return path.resolve(__dirname, '..')
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app', 'embedded')
+  }
+  return path.join(__dirname, 'embedded')
+}
+
+function runProcess(cmd, args, opts = {}) {
+  return new Promise((resolve) => {
+    const cp = spawn(cmd, args, opts)
+    let out = ''
+    let err = ''
+    cp.stdout.on('data', (d) => (out += d.toString()))
+    cp.stderr.on('data', (d) => (err += d.toString()))
+    cp.on('close', (code) => resolve({ code, stdout: out, stderr: err }))
+  })
+}
+
+async function ensurePythonDeps(root) {
+  const check = await runProcess('python3', ['-c', 'import cv2, numpy, mediapipe'], {
+    cwd: root,
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+  })
+  if (check.code === 0) return { ok: true, installed: false }
+
+  const install = await runProcess('python3', ['-m', 'pip', 'install', '--user', '-r', 'requirements.txt'], {
+    cwd: root,
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+  })
+  return { ok: install.code === 0, installed: true, checkErr: check.stderr, installOut: install.stdout, installErr: install.stderr }
 }
 
 function createWindow() {
@@ -43,16 +71,21 @@ ipcMain.handle('run-culler', async (_evt, payload) => {
   if (payload.dryRun) args.push('--dry-run')
   if (payload.move) args.push('--move')
 
-  return await new Promise((resolve) => {
-    const cp = spawn('python3', args, { cwd: root, env: { ...process.env, PYTHONUNBUFFERED: '1' } })
-    let out = ''
-    let err = ''
-    cp.stdout.on('data', (d) => (out += d.toString()))
-    cp.stderr.on('data', (d) => (err += d.toString()))
-    cp.on('close', (code) => {
-      resolve({ ok: code === 0, code, stdout: out, stderr: err })
-    })
+  const prep = await ensurePythonDeps(root)
+  if (!prep.ok) {
+    return {
+      ok: false,
+      code: 1,
+      stdout: prep.installOut || '',
+      stderr: `의존성 설치 실패\n${prep.checkErr || ''}\n${prep.installErr || ''}`,
+    }
+  }
+
+  const ran = await runProcess('python3', args, {
+    cwd: root,
+    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
   })
+  return { ok: ran.code === 0, code: ran.code, stdout: ran.stdout, stderr: ran.stderr }
 })
 
 ipcMain.handle('open-path', async (_evt, p) => {

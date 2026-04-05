@@ -5,8 +5,9 @@
   "description": "ktk.select macOS GUI (Stitch-guided Carbon Dark)",
   "main": "main.cjs",
   "scripts": {
-    "dev": "electron .",
-    "pack:mac:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
+    "prepare:embedded": "bash scripts/prepare-embedded.sh",
+    "dev": "npm run prepare:embedded && electron .",
+    "pack:mac:unsigned": "npm run prepare:embedded && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
     "stitch:spec": "cat STITCH_UI_SPEC.txt"
   },
   "devDependencies": {
@@ -19,12 +20,12 @@
     "directories": {
       "output": "release"
     },
+    "asar": false,
     "files": [
       "main.cjs",
       "preload.cjs",
       "renderer/**/*",
-      "../ktk_select/**/*",
-      "../requirements.txt"
+      "embedded/**/*"
     ],
     "extraMetadata": {
       "main": "main.cjs"
