@@ -1,0 +1,55 @@
+{
+  "summary": {
+    "labeled_class_count": 6,
+    "class_accuracy": 1.0,
+    "missing_prediction_count": 0
+  },
+  "reject_binary": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "tp": 6,
+    "fp": 0,
+    "fn": 0
+  },
+  "confusion_matrix": {
+    "keep": {},
+    "review": {},
+    "reject": {
+      "reject": 6
+    }
+  },
+  "rule_metrics": {
+    "eyes_closed": {
+      "labeled": 6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "focus_subject": {
+      "labeled": 6,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "blur": {
+      "labeled": 6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "exposure_bad": {
+      "labeled": 6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "duplicate": {
+      "labeled": 6,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "missing_predictions": []
+}
