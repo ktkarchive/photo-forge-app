@@ -163,16 +163,18 @@ function updateSelectionDetail(item) {
   $('detailReason').textContent = item.reject_reasons || item.review_reasons || '-'
 }
 
-function reasonChips(scores) {
+function reasonChips(scores, totalScore) {
   const levelClass = (v) => {
     if (v >= 3) return 'lv3'
     if (v >= 2) return 'lv2'
     if (v >= 1) return 'lv1'
     return 'lv0'
   }
-  return ['눈감', '초점', '블러', '노출', '중복']
+  const scoreBox = `<span class="chip total-score" title="종합 점수">${totalScore}</span>`
+  const tags = ['눈감', '초점', '블러', '노출', '중복']
     .map((x) => `<span class="chip ${levelClass(scores[x] || 0)}">${x}</span>`)
     .join('')
+  return `${scoreBox}${tags}`
 }
 
 function syncQuickButtons() {
@@ -258,10 +260,11 @@ function makeReviewCard(item) {
   img.onclick = () => window.ktk.openPath(item.file)
 
   const sc = reasonScores(item)
+  const total = itemScore(item)
 
   const meta = document.createElement('div')
   meta.className = 'meta'
-  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()} · score ${itemScore(item)}</div><div class="reasons">${item.reject_reasons || item.review_reasons || '-'}</div><div class="chips">${reasonChips(sc)}</div>`
+  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="chips">${reasonChips(sc, total)}</div>`
 
   const toggles = document.createElement('div')
   toggles.className = 'smallActions'
