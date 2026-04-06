@@ -107,28 +107,28 @@ body {
 }
 
 .logoSlot {
-  height: 106px;
+  height: 126px;
   border: 1px solid #2f2f2f;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   background: #000000;
-  padding: 8px 12px;
+  padding: 10px 12px;
 }
 
 .logoBrandRow {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
 }
 
 .sideLogo {
-  width: 86px;
-  height: 86px;
-  border-radius: 18px;
+  width: 104px;
+  height: 104px;
+  border-radius: 20px;
   object-fit: cover;
   flex: 0 0 auto;
 }
@@ -149,12 +149,41 @@ body {
   line-height: 1.06;
 }
 
+.brandByRow {
+  margin-top: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .brandBy {
-  margin-top: 4px;
   font-size: 12px;
   letter-spacing: 0.6px;
   color: #b8bfcb;
   line-height: 1;
+}
+
+.socialIconBtn {
+  width: 18px;
+  height: 18px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 4px;
+  background: transparent !important;
+  color: #b8bfcb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.socialIconBtn:hover {
+  color: #e6ebf5;
+}
+
+.socialIcon {
+  width: 15px;
+  height: 15px;
+  display: block;
 }
 
 .leftCenter {
