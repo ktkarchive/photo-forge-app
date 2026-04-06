@@ -42,7 +42,12 @@ const defaultPresets = {
   aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 3 },
 }
 
-const DUP_BURST_WINDOW_SEC = 2.5
+function duplicateLevelToBurstSec(level) {
+  const n = Number(level || 0)
+  if (n <= 1) return 2.5
+  if (n === 2) return 5.0
+  return 7.5
+}
 
 function loadPresets() {
   try {
@@ -73,13 +78,14 @@ function applyLevelSet(levels) {
 }
 
 function getSettingFromUI() {
+  const dupLevel = Number($('dup').value || 0)
   return {
     inputDir: $('inputDir').value.trim(),
     outputDir: $('outputDir').value.trim(),
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
     compromise: 0,
-    burstWindowSec: DUP_BURST_WINDOW_SEC,
+    burstWindowSec: duplicateLevelToBurstSec(dupLevel),
     levels: {
       eyes_closed: Number($('eyes').value),
       out_of_focus_subject: Number($('focus').value),
@@ -239,7 +245,7 @@ async function recomputeBurstDuplicateGroupsWithProgress() {
   const myToken = regroupToken
 
   const dupLevel = Number($('dup')?.value || 0)
-  const burstWindowSec = DUP_BURST_WINDOW_SEC
+  const burstWindowSec = duplicateLevelToBurstSec(dupLevel)
   const dupBase = Number(analysisSummary?.thresholds?.duplicate_hamming_max ?? 8)
   const dupThreshold = dupBase + (dupLevel <= 1 ? 2 : dupLevel === 2 ? 6 : 10)
 
