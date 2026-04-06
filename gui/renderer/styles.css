@@ -167,10 +167,21 @@ body {
 .reviewGrid.view-small .chips { margin-top: 3px; gap: 2px; }
 .reviewGrid.view-small .chip { font-size: 9px; padding: 1px 4px; }
 .reviewGrid.view-small .smallActions { display: none; }
-.reviewGrid.view-list .reviewCard { display: grid; grid-template-columns: 130px 1fr 160px; gap: 10px; align-items: center; }
-.reviewGrid.view-list .thumb { width: 130px; height: 86px; }
+.reviewGrid.view-list .reviewCard {
+  display: grid;
+  grid-template-columns: 88px 1fr 128px;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 6px;
+  min-height: 52px;
+}
+.reviewGrid.view-list .thumb { width: 88px; height: 44px; }
 .reviewGrid.view-list .meta { margin-top: 0; }
-.reviewGrid.view-list .smallActions { margin-top: 0; }
+.reviewGrid.view-list .filename { font-size: 11px; }
+.reviewGrid.view-list .chips { margin-top: 2px; gap: 2px; }
+.reviewGrid.view-list .chip { font-size: 9px; padding: 1px 4px; }
+.reviewGrid.view-list .smallActions { margin-top: 0; gap: 4px; }
+.reviewGrid.view-list .smallActions button { font-size: 10px; padding: 4px 6px; }
 .meta { margin-top: 8px; }
 .filename { font-size: 12px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
