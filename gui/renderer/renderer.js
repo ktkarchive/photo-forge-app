@@ -267,11 +267,20 @@ function makeReviewCard(item) {
   card.className = `reviewCard decision-${item.decision || 'none'}`
   if (item.file === activeFile) card.classList.add('active-card')
 
+  const thumbStage = document.createElement('div')
+  thumbStage.className = 'thumbStage'
+
+  const thumbMat = document.createElement('div')
+  thumbMat.className = 'thumbMat'
+
   const img = document.createElement('img')
   img.className = 'thumb'
   img.src = `file://${item.file}`
   img.loading = 'lazy'
   img.onclick = () => window.ktk.openPath(item.file)
+
+  thumbMat.appendChild(img)
+  thumbStage.appendChild(thumbMat)
 
   const sc = reasonScores(item)
   const total = itemScore(item)
@@ -310,7 +319,7 @@ function makeReviewCard(item) {
   toggles.appendChild(a)
   toggles.appendChild(r)
 
-  card.appendChild(img)
+  card.appendChild(thumbStage)
   card.appendChild(meta)
   card.appendChild(toggles)
   return card

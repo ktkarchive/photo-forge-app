@@ -153,36 +153,57 @@ body {
 .cycleFilter.mode-approve { background: #24a148; border-color: #24a148; color: #08140b; }
 .cycleFilter.mode-reject { background: #da1e28; border-color: #da1e28; color: #fff1f1; }
 .hotkeyHint { font-size: 11px; color: #a8a8a8; margin-bottom: 8px; }
-.reviewGrid { flex: 1; overflow: auto; display: grid; gap: 10px; padding: 4px; }
-.reviewGrid.view-large { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.reviewGrid.view-small { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.reviewGrid { flex: 1; overflow: auto; display: grid; gap: 10px; padding: 4px; align-content: start; justify-content: start; }
+.reviewGrid.view-large { grid-template-columns: repeat(auto-fill, 186px); }
+.reviewGrid.view-small { grid-template-columns: repeat(auto-fill, 96px); }
 .reviewGrid.view-list { grid-template-columns: 1fr; }
 .reviewCard { border: 1px solid #3b3b3b; border-radius: 8px; background: #262626; padding: 5px; }
 .reviewCard.decision-approve { border-color: #24a148; }
 .reviewCard.decision-reject { border-color: #da1e28; }
 .reviewCard.active-card { background: #2b2f33; }
-.thumb { width: 100%; height: 104px; object-fit: cover; border-radius: 5px; border: 1px solid #4d4d4d; cursor: pointer; }
-.reviewGrid.view-small .reviewCard { padding: 3px; border-radius: 6px; }
-.reviewGrid.view-small .thumb { height: 42px; border-radius: 4px; }
+
+.thumbStage { width: 100%; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; }
+.thumbMat { width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; border-radius: 5px; overflow: hidden; }
+.thumb {
+  max-width: calc(100% - 2px);
+  max-height: calc(100% - 2px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 3px;
+  border: 0;
+  cursor: pointer;
+}
+
+.reviewGrid.view-large .reviewCard { width: 186px; height: 248px; overflow: hidden; }
+.reviewGrid.view-large .meta { margin-top: 4px; }
+.reviewGrid.view-large .smallActions { margin-top: 6px; }
+
+.reviewGrid.view-small .reviewCard { width: 96px; height: 124px; padding: 3px; border-radius: 6px; overflow: hidden; }
 .reviewGrid.view-small .meta { margin-top: 2px; }
 .reviewGrid.view-small .filename { font-size: 10px; }
 .reviewGrid.view-small .chips { margin-top: 2px; gap: 2px; }
 .reviewGrid.view-small .chip { font-size: 9px; padding: 1px 4px; }
 .reviewGrid.view-small .smallActions { display: none; }
+
 .reviewGrid.view-list .reviewCard {
   display: grid;
-  grid-template-columns: 72px 1fr 116px;
+  grid-template-columns: 48px 1fr 116px;
   gap: 5px;
   align-items: center;
   padding: 3px 5px;
+  height: 52px;
 }
-.reviewGrid.view-list .thumb { width: 72px; height: 36px; }
+.reviewGrid.view-list .thumbStage { width: 48px; height: 48px; aspect-ratio: auto; }
+.reviewGrid.view-list .thumbMat { border-radius: 3px; }
+.reviewGrid.view-list .thumb { border-radius: 2px; }
 .reviewGrid.view-list .meta { margin-top: 0; }
 .reviewGrid.view-list .filename { font-size: 10px; }
 .reviewGrid.view-list .chips { margin-top: 1px; gap: 2px; }
 .reviewGrid.view-list .chip { font-size: 8px; padding: 1px 3px; }
 .reviewGrid.view-list .smallActions { margin-top: 0; gap: 3px; }
 .reviewGrid.view-list .smallActions button { font-size: 10px; padding: 3px 5px; }
+
 .meta { margin-top: 4px; }
 .filename { font-size: 11px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; }
