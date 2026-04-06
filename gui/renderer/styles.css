@@ -160,7 +160,13 @@ body {
 .reviewCard { border: 1px solid #3b3b3b; border-radius: 8px; background: #262626; padding: 8px; }
 .reviewCard.active-card { border-color: #0f62fe; box-shadow: 0 0 0 1px #0f62fe inset; }
 .thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d; cursor: pointer; }
-.reviewGrid.view-small .thumb { height: 74px; }
+.reviewGrid.view-small .reviewCard { padding: 4px; border-radius: 6px; }
+.reviewGrid.view-small .thumb { height: 56px; border-radius: 4px; }
+.reviewGrid.view-small .meta { margin-top: 4px; }
+.reviewGrid.view-small .filename { font-size: 10px; }
+.reviewGrid.view-small .chips { margin-top: 3px; gap: 2px; }
+.reviewGrid.view-small .chip { font-size: 9px; padding: 1px 4px; }
+.reviewGrid.view-small .smallActions { display: none; }
 .reviewGrid.view-list .reviewCard { display: grid; grid-template-columns: 130px 1fr 160px; gap: 10px; align-items: center; }
 .reviewGrid.view-list .thumb { width: 130px; height: 86px; }
 .reviewGrid.view-list .meta { margin-top: 0; }
