@@ -72,13 +72,7 @@
             <span id="modalSummary">0건</span>
           </div>
           <div class="reviewToolbar">
-            <label>필터
-              <select id="reviewFilter">
-                <option value="all" selected>전체</option>
-                <option value="approve">approve</option>
-                <option value="reject">reject</option>
-              </select>
-            </label>
+            <button id="cycleFilterBtn" class="cycleFilter mode-all" type="button">모두</button>
             <label>정렬
               <select id="reviewSort">
                 <option value="score_desc" selected>점수 높은순</option>
@@ -91,10 +85,15 @@
               <input id="reviewMinScore" type="range" min="0" max="15" value="0" />
               <b id="reviewMinScoreVal">0</b>
             </label>
-            <button id="quickApproveView" class="ghostBtn" type="button">approve만 빠르게 보기</button>
-            <button id="quickRejectView" class="ghostBtn" type="button">reject만 빠르게 보기</button>
+            <label>보기
+              <select id="viewMode">
+                <option value="large" selected>크게보기</option>
+                <option value="small">작게보기</option>
+                <option value="list">목록</option>
+              </select>
+            </label>
           </div>
-          <div class="hotkeyHint">단축키: ↑↓←→ 이동, A=approve, R=reject, Q=approve quick, W=reject quick, Enter=확인, Esc=취소</div>
+          <div class="hotkeyHint">단축키: ↑↓←→ 이동, A=승인, R=거절, Enter=확인, Esc=취소</div>
           <div id="reviewGrid" class="reviewGrid"></div>
           <div class="reviewActions">
             <button id="cancelReview" class="ghost">취소</button>

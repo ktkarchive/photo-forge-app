@@ -21,7 +21,7 @@ let modalItems = []
 let reviewFilter = 'all'
 let reviewSort = 'score_desc'
 let reviewMinScore = 0
-let quickViewMode = 'none'
+let viewMode = 'large'
 let activeFile = ''
 
 const defaultPresets = {
@@ -157,7 +157,8 @@ function updateSelectionDetail(item) {
   const name = item.file.split('/').pop()
   $('detailName').textContent = name
   $('detailPath').textContent = item.file
-  $('detailDecision').textContent = item.decision || '-'
+  const decisionLabel = item.decision === 'approve' ? '승인' : item.decision === 'reject' ? '거절' : '-'
+  $('detailDecision').textContent = decisionLabel
   $('detailScore').textContent = String(itemScore(item))
   $('detailBurst').textContent = `${$('burstLevel').value} (${burstLevelToSec($('burstLevel').value)}s)`
   $('detailReason').textContent = item.reject_reasons || item.review_reasons || '-'
@@ -177,23 +178,31 @@ function reasonChips(scores, totalScore) {
   return `${scoreBox}${tags}`
 }
 
-function syncQuickButtons() {
-  const approveBtn = $('quickApproveView')
-  const rejectBtn = $('quickRejectView')
-  const approveOn = quickViewMode === 'approve'
-  const rejectOn = quickViewMode === 'reject'
+function applyCycleFilterButton() {
+  const btn = $('cycleFilterBtn')
+  btn.classList.remove('mode-all', 'mode-approve', 'mode-reject')
+  if (reviewFilter === 'approve') {
+    btn.classList.add('mode-approve')
+    btn.textContent = '승인'
+  } else if (reviewFilter === 'reject') {
+    btn.classList.add('mode-reject')
+    btn.textContent = '거절'
+  } else {
+    btn.classList.add('mode-all')
+    btn.textContent = '모두'
+  }
+}
 
-  approveBtn.classList.toggle('active', approveOn)
-  rejectBtn.classList.toggle('active', rejectOn)
-
-  approveBtn.textContent = approveOn ? 'approve 빠른보기 ON' : 'approve만 빠르게 보기'
-  rejectBtn.textContent = rejectOn ? 'reject 빠른보기 ON' : 'reject만 빠르게 보기'
+function applyViewMode() {
+  const grid = $('reviewGrid')
+  grid.classList.remove('view-large', 'view-small', 'view-list')
+  grid.classList.add(`view-${viewMode}`)
 }
 
 function refreshModalSummary() {
   const rejectCnt = modalItems.filter((x) => x.decision === 'reject').length
   const visible = getDisplayedItems().length
-  $('modalSummary').textContent = `${modalItems.length}건 (reject ${rejectCnt}, 표시 ${visible}, score≥${reviewMinScore})`
+  $('modalSummary').textContent = `${modalItems.length}건 (거절 ${rejectCnt}, 표시 ${visible}, score≥${reviewMinScore})`
 }
 
 function getDisplayedItems() {
@@ -270,8 +279,8 @@ function makeReviewCard(item) {
   toggles.className = 'smallActions'
   const a = document.createElement('button')
   const r = document.createElement('button')
-  a.textContent = 'approve'
-  r.textContent = 'reject'
+  a.textContent = '승인'
+  r.textContent = '거절'
 
   a.classList.toggle('sel', item.decision === 'approve')
   r.classList.toggle('sel', item.decision === 'reject')
@@ -305,6 +314,7 @@ function makeReviewCard(item) {
 function renderReviewGrid() {
   const items = getDisplayedItems()
   const grid = $('reviewGrid')
+  applyViewMode()
   grid.innerHTML = ''
   items.forEach((it) => grid.appendChild(makeReviewCard(it)))
   refreshModalSummary()
@@ -316,12 +326,12 @@ function openReview(items) {
   reviewFilter = 'all'
   reviewSort = 'score_desc'
   reviewMinScore = 0
-  quickViewMode = 'none'
-  $('reviewFilter').value = reviewFilter
+  viewMode = 'large'
   $('reviewSort').value = reviewSort
   $('reviewMinScore').value = String(reviewMinScore)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  syncQuickButtons()
+  $('viewMode').value = viewMode
+  applyCycleFilterButton()
   activeFile = items[0]?.file || ''
   $('emptyCenter').classList.add('hidden')
   $('reviewPanel').classList.remove('hidden')
@@ -387,19 +397,6 @@ $('openOut').addEventListener('click', async () => {
   if (p) await window.ktk.openPath(p)
 })
 
-$('reviewFilter').addEventListener('change', () => {
-  reviewFilter = $('reviewFilter').value
-  if (quickViewMode === 'approve' && reviewFilter !== 'approve') {
-    quickViewMode = 'none'
-    syncQuickButtons()
-  }
-  if (quickViewMode === 'reject' && reviewFilter !== 'reject') {
-    quickViewMode = 'none'
-    syncQuickButtons()
-  }
-  renderReviewGrid()
-})
-
 $('reviewSort').addEventListener('change', () => {
   reviewSort = $('reviewSort').value
   renderReviewGrid()
@@ -408,51 +405,21 @@ $('reviewSort').addEventListener('change', () => {
 $('reviewMinScore').addEventListener('input', () => {
   reviewMinScore = Number($('reviewMinScore').value || 0)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  if (quickViewMode === 'reject' && reviewMinScore < 1) {
-    quickViewMode = 'none'
-    syncQuickButtons()
-  }
-  if (quickViewMode === 'approve' && reviewMinScore !== 0) {
-    quickViewMode = 'none'
-    syncQuickButtons()
-  }
   renderReviewGrid()
 })
 
-function toggleQuickApproveView() {
-  quickViewMode = quickViewMode === 'approve' ? 'none' : 'approve'
-  if (quickViewMode === 'approve') {
-    reviewFilter = 'approve'
-    reviewMinScore = 0
-  } else {
-    reviewFilter = 'all'
-    reviewMinScore = 0
-  }
-  $('reviewFilter').value = reviewFilter
-  $('reviewMinScore').value = String(reviewMinScore)
-  $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  syncQuickButtons()
+$('viewMode').addEventListener('change', () => {
+  viewMode = $('viewMode').value || 'large'
   renderReviewGrid()
-}
+})
 
-function toggleQuickRejectView() {
-  quickViewMode = quickViewMode === 'reject' ? 'none' : 'reject'
-  if (quickViewMode === 'reject') {
-    reviewFilter = 'reject'
-    reviewMinScore = Math.max(1, Number($('reviewMinScore').value || 0))
-  } else {
-    reviewFilter = 'all'
-    reviewMinScore = 0
-  }
-  $('reviewFilter').value = reviewFilter
-  $('reviewMinScore').value = String(reviewMinScore)
-  $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  syncQuickButtons()
+$('cycleFilterBtn').addEventListener('click', () => {
+  if (reviewFilter === 'all') reviewFilter = 'approve'
+  else if (reviewFilter === 'approve') reviewFilter = 'reject'
+  else reviewFilter = 'all'
+  applyCycleFilterButton()
   renderReviewGrid()
-}
-
-$('quickApproveView').addEventListener('click', toggleQuickApproveView)
-$('quickRejectView').addEventListener('click', toggleQuickRejectView)
+})
 
 $('cancelReview').addEventListener('click', () => {
   closeReview()
@@ -512,7 +479,7 @@ $('runBtn').addEventListener('click', async () => {
     return { ...it, decision }
   })
 
-  $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 approve/reject 조정 후 확인을 누르세요.`
+  $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 승인/거절 조정 후 확인을 누르세요.`
   openReview(items)
 })
 
@@ -559,17 +526,6 @@ document.addEventListener('keydown', (e) => {
   if (key === 'arrowdown') {
     e.preventDefault()
     moveActiveBy('down')
-    return
-  }
-
-  if (key === 'q') {
-    e.preventDefault()
-    toggleQuickApproveView()
-    return
-  }
-  if (key === 'w') {
-    e.preventDefault()
-    toggleQuickRejectView()
     return
   }
 

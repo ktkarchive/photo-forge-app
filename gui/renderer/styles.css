@@ -139,16 +139,32 @@ body {
 
 .reviewToolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .reviewToolbar label { display: flex; align-items: center; gap: 6px; color: #c6c6c6; font-size: 12px; }
-.reviewToolbar select { width: auto; min-width: 150px; padding: 6px 8px; }
+.reviewToolbar select { width: auto; min-width: 132px; padding: 6px 8px; }
 .scoreFilterWrap input[type="range"] { width: 140px; }
 .scoreFilterWrap b { min-width: 18px; display: inline-block; text-align: right; color: #d0e2ff; }
-.ghostBtn { padding: 6px 10px; background: #262626; border-color: #525252; font-size: 12px; }
-.ghostBtn.active { border-color: #0f62fe; color: #d0e2ff; box-shadow: 0 0 0 1px #0f62fe inset; }
+.cycleFilter {
+  width: 86px;
+  min-width: 86px;
+  max-width: 86px;
+  text-align: center;
+  font-weight: 700;
+}
+.cycleFilter.mode-all { background: #3a3a3a; border-color: #666; color: #f4f4f4; }
+.cycleFilter.mode-approve { background: #24a148; border-color: #24a148; color: #08140b; }
+.cycleFilter.mode-reject { background: #da1e28; border-color: #da1e28; color: #fff1f1; }
 .hotkeyHint { font-size: 11px; color: #a8a8a8; margin-bottom: 8px; }
-.reviewGrid { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 4px; }
+.reviewGrid { flex: 1; overflow: auto; display: grid; gap: 10px; padding: 4px; }
+.reviewGrid.view-large { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.reviewGrid.view-small { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.reviewGrid.view-list { grid-template-columns: 1fr; }
 .reviewCard { border: 1px solid #3b3b3b; border-radius: 8px; background: #262626; padding: 8px; }
 .reviewCard.active-card { border-color: #0f62fe; box-shadow: 0 0 0 1px #0f62fe inset; }
 .thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d; cursor: pointer; }
+.reviewGrid.view-small .thumb { height: 74px; }
+.reviewGrid.view-list .reviewCard { display: grid; grid-template-columns: 130px 1fr 160px; gap: 10px; align-items: center; }
+.reviewGrid.view-list .thumb { width: 130px; height: 86px; }
+.reviewGrid.view-list .meta { margin-top: 0; }
+.reviewGrid.view-list .smallActions { margin-top: 0; }
 .meta { margin-top: 8px; }
 .filename { font-size: 12px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
