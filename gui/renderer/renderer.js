@@ -697,11 +697,6 @@ function getDisplayedItems() {
   if (reviewFilter === 'approve') items = items.filter((x) => x.decision === 'approve')
   if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
 
-  // 공간이 작은 보기에서는 문제 컷 중심으로 표시
-  if (reviewFilter === 'all' && viewMode === 'small') {
-    items = items.filter((x) => itemScore(x) > 0)
-  }
-
   items.sort((a, b) => {
     if (reviewFilter === 'all') return a.file.localeCompare(b.file)
     const sa = itemScore(a)
