@@ -34,6 +34,7 @@ let analyzeStartedAt = 0
 let regroupToken = 0
 let regroupTimer = null
 let groupModalState = { groupId: '', selectedFile: '' }
+let previewState = { file: '' }
 
 const defaultPresets = {
   conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 1 },
@@ -625,7 +626,7 @@ function updateSelectionDetail(item) {
   const name = item.file.split('/').pop()
   $('detailName').textContent = name
   $('detailPath').textContent = item.file
-  const decisionLabel = item.decision === 'approve' ? '승인' : item.decision === 'reject' ? '거절' : '-'
+  const decisionLabel = item.decision === 'approve' ? '승인' : item.decision === 'reject' ? '제외' : '-'
   $('detailDecision').textContent = decisionLabel
   $('detailScore').textContent = String(itemScore(item))
   $('detailReason').textContent = item.reject_reasons || item.review_reasons || '-'
@@ -639,7 +640,7 @@ function reasonChips(item, scores, totalScore) {
     return 'lv0'
   }
 
-  const showOnlyIssues = viewMode === 'small' || viewMode === 'list'
+  const showOnlyIssues = viewMode === 'small'
   const scoreBox = showOnlyIssues ? '' : `<span class="chip total-score" title="종합 점수">${totalScore}</span>`
 
   const issueTags = ['눈감', '초점', '블러', '노출', '중복']
@@ -666,7 +667,7 @@ function applyCycleFilterButton() {
     btn.textContent = '승인'
   } else if (reviewFilter === 'reject') {
     btn.classList.add('mode-reject')
-    btn.textContent = '거절'
+    btn.textContent = '제외'
   } else {
     btn.classList.add('mode-all')
     btn.textContent = '모두'
@@ -675,14 +676,20 @@ function applyCycleFilterButton() {
 
 function applyViewMode() {
   const grid = $('reviewGrid')
-  grid.classList.remove('view-large', 'view-small', 'view-list')
+  grid.classList.remove('view-large', 'view-small')
   grid.classList.add(`view-${viewMode}`)
+}
+
+function updateViewToggleButton() {
+  const btn = $('viewToggleBtn')
+  if (!btn) return
+  btn.textContent = viewMode === 'small' ? '작게보기' : '크게보기'
 }
 
 function refreshModalSummary() {
   const rejectCnt = modalItems.filter((x) => x.decision === 'reject').length
   const visible = getDisplayedItems().length
-  $('modalSummary').textContent = `${modalItems.length}건 (거절 ${rejectCnt}, 표시 ${visible}, 강도≥${reviewMinScore})`
+  $('modalSummary').textContent = `${modalItems.length}건 (제외 ${rejectCnt}, 표시 ${visible}, 강도≥${reviewMinScore})`
 }
 
 function getDisplayedItems() {
@@ -691,7 +698,7 @@ function getDisplayedItems() {
   if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
 
   // 공간이 작은 보기에서는 문제 컷 중심으로 표시
-  if (reviewFilter === 'all' && (viewMode === 'small' || viewMode === 'list')) {
+  if (reviewFilter === 'all' && viewMode === 'small') {
     items = items.filter((x) => itemScore(x) > 0)
   }
 
@@ -742,6 +749,65 @@ function moveActiveBy(direction) {
   renderReviewGrid()
 }
 
+function currentFilterLabel() {
+  if (reviewFilter === 'approve') return '승인'
+  if (reviewFilter === 'reject') return '제외'
+  return '모두'
+}
+
+function updatePreviewPanel(item, displayed, index) {
+  if (!item) return
+  $('previewImage').src = `file://${item.file}`
+  $('previewName').textContent = item.file.split('/').pop() || '-'
+  $('previewPath').textContent = item.file
+  $('previewFilter').textContent = currentFilterLabel()
+  $('previewIndex').textContent = `${index + 1}/${displayed.length}`
+  $('previewScore').textContent = String(itemScore(item))
+  $('previewReason').textContent = item.reject_reasons || item.review_reasons || '-'
+
+  $('previewApprove').classList.toggle('primary', item.decision === 'approve')
+  $('previewApprove').classList.toggle('ghost', item.decision !== 'approve')
+  $('previewReject').classList.toggle('primary', item.decision === 'reject')
+  $('previewReject').classList.toggle('ghost', item.decision !== 'reject')
+}
+
+function openPreviewForItem(item) {
+  const displayed = getDisplayedItems()
+  if (!displayed.length) return
+  const idx = Math.max(0, displayed.findIndex((x) => x.file === item.file))
+  previewState.file = displayed[idx].file
+  activeFile = previewState.file
+  updatePreviewPanel(displayed[idx], displayed, idx)
+  $('previewModal').classList.remove('hidden')
+}
+
+function movePreviewBy(delta) {
+  const displayed = getDisplayedItems()
+  if (!displayed.length) return
+  let idx = displayed.findIndex((x) => x.file === previewState.file)
+  if (idx < 0) idx = 0
+  idx += delta
+  if (idx < 0) idx = 0
+  if (idx >= displayed.length) idx = displayed.length - 1
+  previewState.file = displayed[idx].file
+  activeFile = previewState.file
+  updatePreviewPanel(displayed[idx], displayed, idx)
+  renderReviewGrid()
+}
+
+function closePreviewModal() {
+  $('previewModal').classList.add('hidden')
+  previewState.file = ''
+}
+
+function setDecisionByFile(file, decision) {
+  const item = modalItems.find((x) => x.file === file)
+  if (!item) return
+  item.decision = decision
+  activeFile = file
+  renderReviewGrid()
+}
+
 function makeReviewCard(item) {
   const card = document.createElement('div')
   card.className = `reviewCard decision-${item.decision || 'none'}`
@@ -757,7 +823,10 @@ function makeReviewCard(item) {
   img.className = 'thumb'
   img.src = `file://${item.file}`
   img.loading = 'lazy'
-  img.onclick = () => window.photoforge.openPath(item.file)
+  img.onclick = (e) => {
+    e.stopPropagation()
+    openPreviewForItem(item)
+  }
 
   thumbMat.appendChild(img)
   thumbStage.appendChild(thumbMat)
@@ -782,7 +851,7 @@ function makeReviewCard(item) {
   const a = document.createElement('button')
   const r = document.createElement('button')
   a.textContent = '승인'
-  r.textContent = '거절'
+  r.textContent = '제외'
 
   a.classList.toggle('sel', item.decision === 'approve')
   r.classList.toggle('sel', item.decision === 'reject')
@@ -821,6 +890,15 @@ function renderReviewGrid() {
   items.forEach((it) => grid.appendChild(makeReviewCard(it)))
   refreshModalSummary()
   updateSelectionDetail(getActiveItem())
+
+  if (!$('previewModal').classList.contains('hidden')) {
+    let idx = items.findIndex((x) => x.file === previewState.file)
+    if (idx < 0 && items.length > 0) {
+      idx = 0
+      previewState.file = items[0].file
+    }
+    if (idx >= 0) updatePreviewPanel(items[idx], items, idx)
+  }
 }
 
 async function openReview(items) {
@@ -832,7 +910,7 @@ async function openReview(items) {
   $('reviewSort').value = reviewSort
   $('reviewMinScore').value = String(reviewMinScore)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
-  $('viewMode').value = viewMode
+  updateViewToggleButton()
   applyCycleFilterButton()
   activeFile = items[0]?.file || ''
   $('emptyCenter').classList.add('hidden')
@@ -844,6 +922,7 @@ async function openReview(items) {
 }
 
 function closeReview() {
+  closePreviewModal()
   $('reviewPanel').classList.add('hidden')
   $('emptyCenter').classList.remove('hidden')
   updateSelectionDetail(null)
@@ -884,6 +963,21 @@ $('groupApply').addEventListener('click', () => {
   renderReviewGrid()
   $('log').textContent = `[중복대표] ${msg}`
   closeGroupModal()
+})
+
+$('previewClose').addEventListener('click', closePreviewModal)
+$('previewModal').addEventListener('click', (e) => {
+  if (e.target.id === 'previewModal') closePreviewModal()
+})
+$('previewPrev').addEventListener('click', () => movePreviewBy(-1))
+$('previewNext').addEventListener('click', () => movePreviewBy(1))
+$('previewApprove').addEventListener('click', () => {
+  if (!previewState.file) return
+  setDecisionByFile(previewState.file, 'approve')
+})
+$('previewReject').addEventListener('click', () => {
+  if (!previewState.file) return
+  setDecisionByFile(previewState.file, 'reject')
 })
 
 if (window.photoforge?.onAnalyzeProgress) {
@@ -985,8 +1079,9 @@ $('reviewMinScore').addEventListener('input', () => {
   renderReviewGrid()
 })
 
-$('viewMode').addEventListener('change', () => {
-  viewMode = $('viewMode').value || 'large'
+$('viewToggleBtn').addEventListener('click', () => {
+  viewMode = viewMode === 'large' ? 'small' : 'large'
+  updateViewToggleButton()
   renderReviewGrid()
 })
 
@@ -1006,7 +1101,7 @@ $('cancelReview').addEventListener('click', () => {
 $('confirmReview').addEventListener('click', async () => {
   const s = getSettingFromUI()
   if (s.exportMode === 'move') {
-    const ok = window.confirm('move mode는 거절본만 Rejected로 이동합니다. 승인본은 원위치 유지됩니다. 진행할까요?')
+    const ok = window.confirm('move mode는 제외본만 Rejected로 이동합니다. 승인본은 원위치 유지됩니다. 진행할까요?')
     if (!ok) return
   }
 
@@ -1066,7 +1161,7 @@ $('runBtn').addEventListener('click', async () => {
     _baseRejectReasons: splitReasons(r.reject_reasons).filter((x) => !isDuplicateReason(x)),
   }))
 
-  $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 승인/거절 조정 후 확인을 누르세요.`
+  $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 승인/제외 조정 후 확인을 누르세요.`
   await openReview(items)
 })
 
@@ -1081,6 +1176,37 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault()
     closeGroupModal()
     return
+  }
+
+  const previewOpen = !$('previewModal').classList.contains('hidden')
+  const key = e.key.toLowerCase()
+
+  if (previewOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closePreviewModal()
+      return
+    }
+    if (key === 'arrowleft') {
+      e.preventDefault()
+      movePreviewBy(-1)
+      return
+    }
+    if (key === 'arrowright') {
+      e.preventDefault()
+      movePreviewBy(1)
+      return
+    }
+    if (key === 'a') {
+      e.preventDefault()
+      if (previewState.file) setDecisionByFile(previewState.file, 'approve')
+      return
+    }
+    if (key === 'r') {
+      e.preventDefault()
+      if (previewState.file) setDecisionByFile(previewState.file, 'reject')
+      return
+    }
   }
 
   const tag = (e.target?.tagName || '').toLowerCase()
@@ -1099,8 +1225,6 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (isTypingTarget) return
-
-  const key = e.key.toLowerCase()
 
   if (key === 'arrowleft') {
     e.preventDefault()
