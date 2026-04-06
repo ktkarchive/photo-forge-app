@@ -179,6 +179,12 @@ ipcMain.handle('open-path', async (_evt, p) => {
   return true
 })
 
+ipcMain.handle('open-external-url', async (_evt, url) => {
+  if (!url || typeof url !== 'string') return false
+  await shell.openExternal(url)
+  return true
+})
+
 ipcMain.handle('startup-warmup', async (evt) => {
   const root = getProjectRoot()
   const notify = (payload) => evt.sender.send('startup-progress', payload)

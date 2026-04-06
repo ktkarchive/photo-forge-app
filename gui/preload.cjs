@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('photoforge', {
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   openPath: (p) => ipcRenderer.invoke('open-path', p),
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
   analyzeForReview: (payload) => ipcRenderer.invoke('analyze-for-review', payload),
   applyReviewExport: (payload) => ipcRenderer.invoke('apply-review-export', payload),
   startupWarmup: () => ipcRenderer.invoke('startup-warmup'),

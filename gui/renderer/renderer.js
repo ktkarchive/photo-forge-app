@@ -907,6 +907,13 @@ $('openOut').addEventListener('click', async () => {
   if (p) await window.photoforge.openPath(p)
 })
 
+const githubIconBtn = $('githubIconBtn')
+if (githubIconBtn) {
+  githubIconBtn.addEventListener('click', async () => {
+    await window.photoforge.openExternalUrl('https://github.com/ktkarchive/photo-forge-app')
+  })
+}
+
 $('reviewSort').addEventListener('change', () => {
   reviewSort = $('reviewSort').value
   renderReviewGrid()
