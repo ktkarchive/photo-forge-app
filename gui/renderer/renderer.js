@@ -8,7 +8,19 @@ for (const id of ids) {
   el.addEventListener('input', () => {
     out.textContent = el.value
     persistRecent()
-    if (id === 'burstLevel') updateSelectionDetail(getActiveItem())
+
+    if (id === 'burstLevel') {
+      updateSelectionDetail(getActiveItem())
+      if (!$('reviewPanel').classList.contains('hidden')) {
+        $('log').textContent = '연사 값 변경은 재분석 후 반영됩니다. (분석실행 필요)'
+      }
+      return
+    }
+
+    if (!$('reviewPanel').classList.contains('hidden')) {
+      recomputeDecisionsByStrength()
+      renderReviewGrid()
+    }
   })
 }
 
@@ -124,24 +136,38 @@ function reasonFlags(rejectReasons) {
   }
 }
 
+function getLiveLevels() {
+  return {
+    eyes_closed: Number($('eyes')?.value || 0),
+    out_of_focus_subject: Number($('focus')?.value || 0),
+    motion_blur: Number($('blur')?.value || 0),
+    exposure_bad: Number($('exposure')?.value || 0),
+    duplicate: Number($('dup')?.value || 0),
+  }
+}
+
 function reasonScores(item) {
   const f = reasonFlags(item.reject_reasons)
-  const levels = item._levels
+  const levels = getLiveLevels()
   return {
     눈감: f.눈감 ? levels.eyes_closed : 0,
     초점: f.초점 ? levels.out_of_focus_subject : 0,
     블러: f.블러 ? levels.motion_blur : 0,
     노출: f.노출 ? levels.exposure_bad : 0,
-    중복: f.중복완전일치 ? 3 : (f.중복 ? levels.duplicate : 0),
+    중복: f.중복완전일치 ? Math.max(1, levels.duplicate) : (f.중복 ? levels.duplicate : 0),
   }
 }
 
-function sumScore(sc) {
-  return sc.눈감 + sc.초점 + sc.블러 + sc.노출 + sc.중복
-}
-
 function itemScore(item) {
-  return sumScore(reasonScores(item))
+  const f = reasonFlags(item.reject_reasons)
+  const levels = getLiveLevels()
+  let count = 0
+  if (f.눈감 && levels.eyes_closed > 0) count += 1
+  if (f.초점 && levels.out_of_focus_subject > 0) count += 1
+  if (f.블러 && levels.motion_blur > 0) count += 1
+  if (f.노출 && levels.exposure_bad > 0) count += 1
+  if (f.중복 && levels.duplicate > 0) count += 1
+  return count
 }
 
 function recomputeDecisionsByStrength() {
@@ -416,6 +442,10 @@ $('presetSelect').addEventListener('change', () => {
   const presets = loadPresets()
   applyLevelSet(presets[$('presetSelect').value] || presets.balanced)
   persistRecent()
+  if (!$('reviewPanel').classList.contains('hidden')) {
+    recomputeDecisionsByStrength()
+    renderReviewGrid()
+  }
 })
 
 $('savePreset').addEventListener('click', () => {
@@ -531,15 +561,7 @@ $('runBtn').addEventListener('click', async () => {
 
   const rows = analyzed.rows || []
   setAnalyzeProgress(false, rows.length, rows.length)
-  const compromise = Number(s.compromise || 0)
-  const items = rows.map((r) => {
-    const it = { ...r, _levels: s.levels }
-    const total = itemScore(it)
-    const hasAny = total > 0
-    let decision = 'approve'
-    if (hasAny && total > compromise) decision = 'reject'
-    return { ...it, decision }
-  })
+  const items = rows.map((r) => ({ ...r, decision: 'approve' }))
 
   $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 승인/거절 조정 후 확인을 누르세요.`
   openReview(items)

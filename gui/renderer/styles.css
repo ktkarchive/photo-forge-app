@@ -122,6 +122,7 @@ body {
 .centerPane {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .reviewPanel {
@@ -129,6 +130,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 10px;
+  min-height: 0;
 }
 
 .reviewHead {
@@ -153,7 +155,7 @@ body {
 .cycleFilter.mode-approve { background: #24a148; border-color: #24a148; color: #08140b; }
 .cycleFilter.mode-reject { background: #da1e28; border-color: #da1e28; color: #fff1f1; }
 .hotkeyHint { font-size: 11px; color: #a8a8a8; margin-bottom: 8px; }
-.reviewGrid { flex: 1; overflow: auto; display: grid; gap: 10px; padding: 4px; align-content: start; justify-content: start; }
+.reviewGrid { flex: 1; overflow-x: hidden; overflow-y: auto; display: grid; gap: 10px; padding: 4px; align-content: start; justify-content: start; min-height: 0; }
 .reviewGrid.view-large { grid-template-columns: repeat(auto-fill, 186px); }
 .reviewGrid.view-small { grid-template-columns: repeat(auto-fill, 96px); }
 .reviewGrid.view-list { grid-template-columns: 1fr; }

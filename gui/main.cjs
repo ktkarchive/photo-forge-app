@@ -3,6 +3,9 @@ const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
 
+let pythonDepsReady = false
+let pythonDepsCheckPromise = null
+
 function getProjectRoot() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'app', 'embedded')
   return path.join(__dirname, 'embedded')
@@ -72,6 +75,22 @@ async function ensurePythonDeps(root) {
   return { ok: install.code === 0, checkErr: check.stderr, installOut: install.stdout, installErr: install.stderr }
 }
 
+async function ensurePythonDepsCached(root) {
+  if (pythonDepsReady) return { ok: true }
+  if (pythonDepsCheckPromise) return pythonDepsCheckPromise
+
+  pythonDepsCheckPromise = ensurePythonDeps(root)
+    .then((res) => {
+      if (res.ok) pythonDepsReady = true
+      return res
+    })
+    .finally(() => {
+      pythonDepsCheckPromise = null
+    })
+
+  return pythonDepsCheckPromise
+}
+
 function countJpegFiles(inputDir) {
   if (!inputDir) return 0
   const stack = [inputDir]
@@ -126,7 +145,7 @@ ipcMain.handle('open-path', async (_evt, p) => {
 
 ipcMain.handle('analyze-for-review', async (evt, payload) => {
   const root = getProjectRoot()
-  const prep = await ensurePythonDeps(root)
+  const prep = await ensurePythonDepsCached(root)
   if (!prep.ok) {
     return {
       ok: false,
@@ -288,6 +307,13 @@ print(json.dumps(summary, ensure_ascii=False))
 
 app.whenReady().then(() => {
   createWindow()
+
+  // 첫 분석 지연 완화: 백그라운드 워밍업(비차단)
+  const root = getProjectRoot()
+  setTimeout(() => {
+    ensurePythonDepsCached(root).catch(() => {})
+  }, 200)
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
