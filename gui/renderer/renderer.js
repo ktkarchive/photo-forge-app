@@ -30,6 +30,7 @@ const LEGACY_PRESET_KEY = 'ktk.select.presets.v1'
 const LEGACY_RECENT_KEY = 'ktk.select.recent.v1'
 
 let modalItems = []
+let analysisSummary = {}
 let reviewFilter = 'all'
 let reviewSort = 'score_desc'
 let reviewMinScore = 0
@@ -37,6 +38,8 @@ let viewMode = 'large'
 let activeFile = ''
 let analyzeProgress = { running: false, current: 0, total: 0 }
 let analyzeStartedAt = 0
+let regroupToken = 0
+let groupModalState = { groupId: '', selectedFile: '' }
 
 const defaultPresets = {
   conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, burstLevel: 1 },
@@ -170,6 +173,170 @@ function itemScore(item) {
   return count
 }
 
+function splitReasons(text) {
+  return String(text || '')
+    .split(';')
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
+
+function isDuplicateReason(reason) {
+  return reason.startsWith('duplicate:') || reason.startsWith('duplicate_exact:')
+}
+
+function joinReasons(reasons) {
+  return reasons.filter(Boolean).join(';')
+}
+
+function parseHashBigInt(v) {
+  const s = String(v || '').trim()
+  if (!s) return null
+  try {
+    return BigInt(s)
+  } catch {
+    return null
+  }
+}
+
+function hammingDistance64BigInt(a, b) {
+  let x = a ^ b
+  let c = 0
+  while (x !== 0n) {
+    x &= x - 1n
+    c += 1
+  }
+  return c
+}
+
+function withinBurstWindow(item, rep, windowSec) {
+  if (windowSec <= 0) return true
+  if (item.capture_ts_source === 'exif' && rep.capture_ts_source === 'exif') {
+    const t1 = Number(item.capture_ts || 0)
+    const t2 = Number(rep.capture_ts || 0)
+    if (!Number.isFinite(t1) || !Number.isFinite(t2)) return true
+    return Math.abs(t1 - t2) <= windowSec
+  }
+  return true
+}
+
+function qualityPenaltyFromBaseReasons(item) {
+  const joined = joinReasons(item._baseRejectReasons || [])
+  const lv = getLiveLevels()
+  let p = 0
+  if (joined.includes('eyes_closed')) p += lv.eyes_closed
+  if (joined.includes('out_of_focus_subject')) p += lv.out_of_focus_subject
+  if (joined.includes('motion_blur')) p += lv.motion_blur
+  if (joined.includes('exposure_bad')) p += lv.exposure_bad
+  return p
+}
+
+function isBetterRepresentative(candidate, current) {
+  const cp = qualityPenaltyFromBaseReasons(candidate)
+  const pp = qualityPenaltyFromBaseReasons(current)
+  if (cp !== pp) return cp < pp
+
+  const cScores = candidate._scoresObj || {}
+  const pScores = current._scoresObj || {}
+  const cBlur = Number(cScores.laplacian_var || 0)
+  const pBlur = Number(pScores.laplacian_var || 0)
+  if (cBlur !== pBlur) return cBlur > pBlur
+
+  const cFocus = Number(cScores.focus_delta || 0)
+  const pFocus = Number(pScores.focus_delta || 0)
+  if (cFocus !== pFocus) return cFocus > pFocus
+
+  return String(candidate.file || '') < String(current.file || '')
+}
+
+async function recomputeBurstDuplicateGroupsWithProgress() {
+  regroupToken += 1
+  const myToken = regroupToken
+
+  const dupLevel = Number($('dup')?.value || 0)
+  const burstWindowSec = burstLevelToSec(Number($('burstLevel')?.value || 0))
+  const dupThreshold = Number(analysisSummary?.thresholds?.duplicate_hamming_max ?? 8)
+
+  for (const item of modalItems) {
+    if (!Array.isArray(item._baseRejectReasons)) {
+      item._baseRejectReasons = splitReasons(item.reject_reasons).filter((r) => !isDuplicateReason(r))
+    }
+    item._dupGroupId = ''
+    item._dupGroupSize = 1
+    item._dupGroupRep = false
+    item._dupGroupMembers = []
+    item._dupGroupBy = ''
+    item.reject_reasons = joinReasons(item._baseRejectReasons)
+  }
+
+  if (dupLevel <= 0) {
+    return
+  }
+
+  const candidates = modalItems
+    .filter((it) => parseHashBigInt(it.hash) !== null)
+    .map((it) => {
+      it._hashBI = parseHashBigInt(it.hash)
+      return it
+    })
+    .sort((a, b) => {
+      const aNoTs = a.capture_ts ? 0 : 1
+      const bNoTs = b.capture_ts ? 0 : 1
+      if (aNoTs !== bNoTs) return aNoTs - bNoTs
+      const at = Number(a.capture_ts || 0)
+      const bt = Number(b.capture_ts || 0)
+      if (at !== bt) return at - bt
+      return String(a.file).localeCompare(String(b.file))
+    })
+
+  const groups = []
+  const total = candidates.length
+  for (let i = 0; i < candidates.length; i += 1) {
+    if (myToken !== regroupToken) return
+    const item = candidates[i]
+    let matched = false
+    for (const g of groups) {
+      const rep = g.rep
+      if (!withinBurstWindow(item, rep, burstWindowSec)) continue
+      const hd = hammingDistance64BigInt(item._hashBI, rep._hashBI)
+      if (hd <= dupThreshold) {
+        g.members.push(item)
+        matched = true
+        if (isBetterRepresentative(item, rep)) g.rep = item
+        break
+      }
+    }
+    if (!matched) groups.push({ rep: item, members: [item] })
+
+    setAnalyzeProgress(true, i + 1, total, '재분류중')
+    await new Promise((r) => setTimeout(r, 0))
+  }
+  setAnalyzeProgress(false, 0, 0)
+
+  for (let gi = 0; gi < groups.length; gi += 1) {
+    const g = groups[gi]
+    if (g.members.length <= 1) continue
+    const gid = `g${gi + 1}`
+    const rep = g.rep
+    const repName = String(rep.file || '').split('/').pop() || ''
+    const by = burstWindowSec > 0 ? 'burst+duplicate' : 'duplicate'
+
+    for (const m of g.members) {
+      m._dupGroupId = gid
+      m._dupGroupSize = g.members.length
+      m._dupGroupRep = m.file === rep.file
+      m._dupGroupMembers = g.members.map((x) => x.file)
+      m._dupGroupBy = by
+      if (m.file !== rep.file) {
+        const hd = hammingDistance64BigInt(m._hashBI, rep._hashBI)
+        const dupReason = hd === 0 ? `duplicate_exact:${repName}` : `duplicate:${repName}:hd=${hd}`
+        m.reject_reasons = joinReasons([...(m._baseRejectReasons || []), dupReason])
+      } else {
+        m.reject_reasons = joinReasons(m._baseRejectReasons || [])
+      }
+    }
+  }
+}
+
 function recomputeDecisionsByStrength() {
   for (const item of modalItems) {
     const total = itemScore(item)
@@ -177,10 +344,10 @@ function recomputeDecisionsByStrength() {
   }
 }
 
-function setAnalyzeProgress(running, current = 0, total = 0) {
+function setAnalyzeProgress(running, current = 0, total = 0, label = '분석중') {
   const now = Date.now()
   const wasRunning = analyzeProgress.running
-  analyzeProgress = { running: !!running, current: Number(current || 0), total: Number(total || 0) }
+  analyzeProgress = { running: !!running, current: Number(current || 0), total: Number(total || 0), label }
 
   if (analyzeProgress.running && !wasRunning) analyzeStartedAt = now
   if (!analyzeProgress.running) analyzeStartedAt = 0
@@ -199,9 +366,9 @@ function setAnalyzeProgress(running, current = 0, total = 0) {
       const remaining = Math.max(0, Math.round((analyzeProgress.total - analyzeProgress.current) * perItem))
       etaTxt = `, 약 ${remaining}s 남음`
     }
-    el.textContent = `분석중 (${analyzeProgress.current}/${analyzeProgress.total}${etaTxt})`
+    el.textContent = `${analyzeProgress.label || '분석중'} (${analyzeProgress.current}/${analyzeProgress.total}${etaTxt})`
   } else {
-    el.textContent = '분석중 (0/?)'
+    el.textContent = `${analyzeProgress.label || '분석중'} (0/?)`
   }
 }
 
@@ -273,6 +440,7 @@ function getDisplayedItems() {
   if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
 
   items.sort((a, b) => {
+    if (reviewFilter === 'all') return a.file.localeCompare(b.file)
     const sa = itemScore(a)
     const sb = itemScore(b)
     if (reviewSort === 'score_desc') return sb - sa || a.file.localeCompare(b.file)
@@ -394,7 +562,7 @@ function renderReviewGrid() {
 function openReview(items) {
   modalItems = items
   reviewFilter = 'all'
-  reviewSort = 'score_desc'
+  reviewSort = 'name_asc'
   reviewMinScore = 0
   viewMode = 'large'
   $('reviewSort').value = reviewSort

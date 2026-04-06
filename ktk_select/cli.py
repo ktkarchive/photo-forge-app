@@ -411,6 +411,9 @@ def run_command(args):
                 "reject_reasons": ";".join(reject_reasons),
                 "review_reasons": ";".join(review_reasons),
                 "scores": json.dumps(scores, ensure_ascii=False),
+                "hash": str(item.get("hash") if item.get("hash") is not None else ""),
+                "capture_ts": str(item.get("capture_ts") if item.get("capture_ts") is not None else ""),
+                "capture_ts_source": str(item.get("capture_ts_source") or ""),
             }
         )
 
@@ -434,7 +437,19 @@ def run_command(args):
 
     result_csv = output_dir / "result.csv"
     with result_csv.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["file", "class", "reject_reasons", "review_reasons", "scores"])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "file",
+                "class",
+                "reject_reasons",
+                "review_reasons",
+                "scores",
+                "hash",
+                "capture_ts",
+                "capture_ts_source",
+            ],
+        )
         writer.writeheader()
         writer.writerows(rows)
 

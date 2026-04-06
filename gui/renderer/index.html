@@ -72,9 +72,9 @@
             <button id="cycleFilterBtn" class="cycleFilter mode-all" type="button">모두</button>
             <label>정렬
               <select id="reviewSort">
-                <option value="score_desc" selected>점수 높은순</option>
+                <option value="score_desc">점수 높은순</option>
                 <option value="score_asc">점수 낮은순</option>
-                <option value="name_asc">파일명 오름차순</option>
+                <option value="name_asc" selected>파일명 오름차순</option>
                 <option value="name_desc">파일명 내림차순</option>
               </select>
             </label>
@@ -130,6 +130,22 @@
             <option value="skip">skip</option>
             <option value="overwrite">overwrite</option>
           </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="groupModal" class="settingsModal hidden">
+      <div class="settingsCard groupCard">
+        <div class="settingsHead">
+          <h3>중복/연사 그룹 대표 이미지 선택</h3>
+          <button id="groupCancel" class="ghost">닫기</button>
+        </div>
+        <div class="settingsBody">
+          <div id="groupMeta" class="smallMuted">-</div>
+          <div id="groupGrid" class="groupGrid"></div>
+        </div>
+        <div class="settingsFoot">
+          <button id="groupApply" class="primary">대표로 지정</button>
         </div>
       </div>
     </div>
