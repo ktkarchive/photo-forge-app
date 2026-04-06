@@ -232,6 +232,13 @@ body {
   border-color: #8a3ffc;
   color: #ffffff;
   cursor: pointer;
+  outline: none;
+  box-shadow: none;
+}
+.chip.dup-group:focus,
+.chip.dup-group:active {
+  outline: none;
+  box-shadow: none;
 }
 .chip.issue {
   color: #ffffff;

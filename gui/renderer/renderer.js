@@ -330,6 +330,86 @@ async function recomputeBurstDuplicateGroupsWithProgress() {
   }
 }
 
+function getGroupMembers(groupId) {
+  return modalItems.filter((x) => x._dupGroupId === groupId)
+}
+
+function rebuildGroupWithRepresentative(groupId, repFile) {
+  const members = getGroupMembers(groupId)
+  if (!members.length) return
+
+  let rep = members.find((m) => m.file === repFile)
+  if (!rep) rep = members[0]
+  const repName = String(rep.file || '').split('/').pop() || ''
+
+  for (const m of members) {
+    m._dupGroupRep = m.file === rep.file
+    m._dupGroupMembers = members.map((x) => x.file)
+    if (m._dupGroupRep) {
+      m.reject_reasons = joinReasons(m._baseRejectReasons || [])
+      continue
+    }
+
+    const mh = parseHashBigInt(m.hash)
+    const rh = parseHashBigInt(rep.hash)
+    let dupReason = `duplicate:${repName}:hd=999`
+    if (mh !== null && rh !== null) {
+      const hd = hammingDistance64BigInt(mh, rh)
+      dupReason = hd === 0 ? `duplicate_exact:${repName}` : `duplicate:${repName}:hd=${hd}`
+    }
+    m.reject_reasons = joinReasons([...(m._baseRejectReasons || []), dupReason])
+  }
+}
+
+function renderGroupModal() {
+  const members = getGroupMembers(groupModalState.groupId)
+  const grid = $('groupGrid')
+  grid.innerHTML = ''
+  for (const m of members) {
+    const card = document.createElement('div')
+    card.className = `groupItem ${m.file === groupModalState.selectedFile ? 'sel' : ''}`
+
+    const stage = document.createElement('div')
+    stage.className = 'thumbStage'
+    const mat = document.createElement('div')
+    mat.className = 'thumbMat'
+    const img = document.createElement('img')
+    img.className = 'thumb'
+    img.src = `file://${m.file}`
+    img.loading = 'lazy'
+    mat.appendChild(img)
+    stage.appendChild(mat)
+
+    const name = document.createElement('div')
+    name.className = 'groupItemName'
+    const base = m.file.split('/').pop()
+    name.textContent = `${m._dupGroupRep ? '대표 · ' : ''}${base}`
+
+    card.appendChild(stage)
+    card.appendChild(name)
+    card.addEventListener('click', () => {
+      groupModalState.selectedFile = m.file
+      renderGroupModal()
+    })
+    grid.appendChild(card)
+  }
+}
+
+function openGroupModal(groupId) {
+  const members = getGroupMembers(groupId)
+  if (!members.length) return
+  const rep = members.find((m) => m._dupGroupRep) || members[0]
+  groupModalState = { groupId, selectedFile: rep.file }
+  $('groupMeta').textContent = `그룹 ${groupId} · ${members.length}장 · 대표 이미지를 선택하세요.`
+  renderGroupModal()
+  $('groupModal').classList.remove('hidden')
+}
+
+function closeGroupModal() {
+  $('groupModal').classList.add('hidden')
+  groupModalState = { groupId: '', selectedFile: '' }
+}
+
 function recomputeDecisionsByStrength() {
   for (const item of modalItems) {
     const total = itemScore(item)
@@ -401,7 +481,7 @@ function reasonChips(item, scores, totalScore) {
     .join('')
 
   const dupTag = item?._dupGroupSize > 1
-    ? `<span class="chip dup-group" title="중복/연사 그룹">중복 ${item._dupGroupSize}</span>`
+    ? `<button type="button" class="chip dup-group" data-group-id="${item._dupGroupId || ''}" title="중복/연사 그룹">중복 ${item._dupGroupSize}</button>`
     : ''
 
   return `${scoreBox}${issueTags}${dupTag}`
@@ -512,6 +592,14 @@ function makeReviewCard(item) {
   const meta = document.createElement('div')
   meta.className = 'meta'
   meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="chips">${reasonChips(item, sc, total)}</div>`
+  const dupBtn = meta.querySelector('.dup-group')
+  if (dupBtn) {
+    dupBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const gid = dupBtn.getAttribute('data-group-id') || item._dupGroupId || ''
+      if (gid) openGroupModal(gid)
+    })
+  }
 
   const toggles = document.createElement('div')
   toggles.className = 'smallActions'
@@ -597,6 +685,18 @@ $('openSettings').addEventListener('click', openSettings)
 $('closeSettings').addEventListener('click', closeSettings)
 $('settingsModal').addEventListener('click', (e) => {
   if (e.target.id === 'settingsModal') closeSettings()
+})
+
+$('groupCancel').addEventListener('click', closeGroupModal)
+$('groupModal').addEventListener('click', (e) => {
+  if (e.target.id === 'groupModal') closeGroupModal()
+})
+$('groupApply').addEventListener('click', () => {
+  if (!groupModalState.groupId || !groupModalState.selectedFile) return
+  rebuildGroupWithRepresentative(groupModalState.groupId, groupModalState.selectedFile)
+  recomputeDecisionsByStrength()
+  renderReviewGrid()
+  closeGroupModal()
 })
 
 if (window.ktk?.onAnalyzeProgress) {
@@ -750,6 +850,12 @@ document.querySelectorAll('input[name="exportMode"]').forEach((r) => r.addEventL
 
 document.addEventListener('keydown', (e) => {
   if ($('reviewPanel').classList.contains('hidden')) return
+
+  if (!$('groupModal').classList.contains('hidden') && e.key === 'Escape') {
+    e.preventDefault()
+    closeGroupModal()
+    return
+  }
 
   const tag = (e.target?.tagName || '').toLowerCase()
   const isTypingTarget = tag === 'input' || tag === 'textarea' || tag === 'select'
