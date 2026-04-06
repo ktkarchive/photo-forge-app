@@ -42,6 +42,54 @@ const defaultPresets = {
   aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 3 },
 }
 
+function setStartupOverlay(percent, message) {
+  const p = Math.max(0, Math.min(100, Number(percent || 0)))
+  const bar = $('startupBarFill')
+  const pct = $('startupPercent')
+  const msg = $('startupMessage')
+  if (bar) bar.style.width = `${p}%`
+  if (pct) pct.textContent = `${Math.round(p)}%`
+  if (msg && message) msg.textContent = message
+}
+
+function hideStartupOverlay() {
+  const ov = $('startupOverlay')
+  if (!ov) return
+  ov.classList.add('hidden')
+}
+
+async function runStartupWarmupUI() {
+  const runBtn = $('runBtn')
+  if (runBtn) runBtn.disabled = true
+
+  let unsub = null
+  if (window.ktk?.onStartupProgress) {
+    unsub = window.ktk.onStartupProgress((p) => {
+      setStartupOverlay(p?.percent || 0, p?.message || '초기화 중...')
+    })
+  }
+
+  try {
+    setStartupOverlay(3, '앱 초기화 중...')
+    const res = await window.ktk.startupWarmup()
+    if (!res?.ok) {
+      setStartupOverlay(100, '초기화 일부 실패 (분석 시 재시도)')
+      $('log').textContent = `[startup] 워밍업 실패\n${res?.error || ''}`
+      setTimeout(hideStartupOverlay, 800)
+    } else {
+      setStartupOverlay(100, '준비 완료')
+      setTimeout(hideStartupOverlay, 250)
+    }
+  } catch (e) {
+    setStartupOverlay(100, '초기화 오류 (분석 시 재시도)')
+    $('log').textContent = `[startup] 오류\n${String(e)}`
+    setTimeout(hideStartupOverlay, 900)
+  } finally {
+    if (typeof unsub === 'function') unsub()
+    if (runBtn) runBtn.disabled = false
+  }
+}
+
 function duplicateLevelToBurstSec(level) {
   const n = Number(level || 0)
   if (n <= 1) return 2.5
@@ -910,3 +958,4 @@ document.addEventListener('keydown', (e) => {
 })
 
 restoreRecent()
+runStartupWarmupUI()

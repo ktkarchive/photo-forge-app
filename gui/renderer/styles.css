@@ -6,6 +6,63 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+.startupOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 12, 12, 0.94);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.startupOverlay.hidden {
+  display: none;
+}
+
+.startupCard {
+  width: min(420px, 88vw);
+  border: 1px solid #393939;
+  border-radius: 12px;
+  background: #1f1f1f;
+  padding: 20px;
+}
+
+.startupTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d0e2ff;
+  margin-bottom: 10px;
+}
+
+.startupMessage {
+  color: #c6c6c6;
+  font-size: 13px;
+}
+
+.startupBar {
+  margin-top: 12px;
+  width: 100%;
+  height: 8px;
+  background: #2f2f2f;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.startupBarFill {
+  height: 100%;
+  width: 0%;
+  background: #24a148;
+  transition: width 120ms ease;
+}
+
+.startupPercent {
+  margin-top: 6px;
+  text-align: right;
+  color: #d0e2ff;
+  font-size: 12px;
+}
+
 .layout3 {
   height: 100vh;
   display: grid;

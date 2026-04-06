@@ -5,6 +5,8 @@ const { spawn } = require('child_process')
 
 let pythonDepsReady = false
 let pythonDepsCheckPromise = null
+let startupWarmupDone = false
+let startupWarmupPromise = null
 
 function getProjectRoot() {
   if (app.isPackaged) return path.join(process.resourcesPath, 'app', 'embedded')
@@ -91,6 +93,44 @@ async function ensurePythonDepsCached(root) {
   return pythonDepsCheckPromise
 }
 
+async function runStartupWarmup(root, notify = null) {
+  if (startupWarmupDone) {
+    if (notify) notify({ step: 'ready', percent: 100, message: '준비 완료' })
+    return { ok: true, warmed: true }
+  }
+
+  if (startupWarmupPromise) return startupWarmupPromise
+
+  startupWarmupPromise = (async () => {
+    if (notify) notify({ step: 'deps', percent: 15, message: 'Python 의존성 확인 중...' })
+    const prep = await ensurePythonDepsCached(root)
+    if (!prep.ok) {
+      return {
+        ok: false,
+        error: `의존성 설치 실패\n${prep.checkErr || ''}\n${prep.installErr || ''}`,
+      }
+    }
+
+    if (notify) notify({ step: 'warm', percent: 65, message: '초기 엔진 워밍업 중...' })
+    const warm = await runProcess('python3', ['-c', 'import cv2, numpy, mediapipe; print("WARMUP_OK")'], {
+      cwd: root,
+      env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
+    })
+
+    if (warm.code !== 0) {
+      return { ok: false, error: warm.stderr || warm.stdout || '워밍업 실패' }
+    }
+
+    startupWarmupDone = true
+    if (notify) notify({ step: 'ready', percent: 100, message: '준비 완료' })
+    return { ok: true, warmed: true }
+  })().finally(() => {
+    startupWarmupPromise = null
+  })
+
+  return startupWarmupPromise
+}
+
 function countJpegFiles(inputDir) {
   if (!inputDir) return 0
   const stack = [inputDir]
@@ -141,6 +181,14 @@ ipcMain.handle('open-path', async (_evt, p) => {
   if (!p) return false
   await shell.openPath(p)
   return true
+})
+
+ipcMain.handle('startup-warmup', async (evt) => {
+  const root = getProjectRoot()
+  const notify = (payload) => evt.sender.send('startup-progress', payload)
+  notify({ step: 'boot', percent: 5, message: '앱 초기화 중...' })
+  const res = await runStartupWarmup(root, notify)
+  return res
 })
 
 ipcMain.handle('analyze-for-review', async (evt, payload) => {
@@ -311,7 +359,7 @@ app.whenReady().then(() => {
   // 첫 분석 지연 완화: 백그라운드 워밍업(비차단)
   const root = getProjectRoot()
   setTimeout(() => {
-    ensurePythonDepsCached(root).catch(() => {})
+    runStartupWarmup(root).catch(() => {})
   }, 200)
 
   app.on('activate', () => {
