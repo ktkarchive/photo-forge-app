@@ -17,3 +17,7 @@ release/
 
 # macOS
 .DS_Store
+
+# Local private sample set (user photos, never commit raw images)
+tests/samplesets/S06_user_test/input/*
+!tests/samplesets/S06_user_test/input/.gitkeep

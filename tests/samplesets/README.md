@@ -20,6 +20,9 @@ Photo Forge 샘플셋 표준 구조
   - S05_real_lite/
     - input/                  # macOS 캐시 기반 실이미지 소량(개인사진 미포함)
     - expected_baseline/
+  - S06_user_test/
+    - input/                  # 사용자 개인 테스트셋(로컬 전용, 원본 git 미추적)
+    - expected_baseline/      # 필요 시 summary 기준값만 선택적으로 추적
 
 각 세트에 포함할 메타 파일
 - manifest.json

@@ -1,0 +1,12 @@
+{
+  "set_id": "S06_user_test",
+  "purpose": "Local-only private user photo validation",
+  "privacy": "private_local_only",
+  "track_input_in_git": false,
+  "tracked_artifacts": [
+    "input/.gitkeep",
+    "notes.md",
+    "manifest.json",
+    "expected_baseline/* (optional)"
+  ]
+}
