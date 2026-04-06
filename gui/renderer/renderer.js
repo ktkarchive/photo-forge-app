@@ -907,6 +907,23 @@ $('openOut').addEventListener('click', async () => {
   if (p) await window.photoforge.openPath(p)
 })
 
+$('undoLast').addEventListener('click', async () => {
+  const outputDir = $('outputDir').value.trim()
+  if (!outputDir) {
+    window.alert('출력 폴더를 먼저 지정해 주세요.')
+    return
+  }
+  const ok = window.confirm('직전 적용 작업을 되돌릴까요?\n(copy는 생성 파일 삭제, move는 원래 위치로 복원)')
+  if (!ok) return
+
+  const res = await window.photoforge.undoLastExport({ outputDir })
+  if (!res?.ok) {
+    $('log').textContent = `되돌리기 실패\n${res?.error || ''}`
+    return
+  }
+  $('log').textContent = `되돌리기 완료\n${JSON.stringify(res.summary?.last_undo || {}, null, 2)}`
+})
+
 const githubIconBtn = $('githubIconBtn')
 if (githubIconBtn) {
   githubIconBtn.addEventListener('click', async () => {

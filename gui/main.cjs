@@ -185,6 +185,104 @@ ipcMain.handle('open-external-url', async (_evt, url) => {
   return true
 })
 
+function resolveRollbackPath(originalPath) {
+  if (!fs.existsSync(originalPath)) return originalPath
+  const dir = path.dirname(originalPath)
+  const ext = path.extname(originalPath)
+  const stem = path.basename(originalPath, ext)
+  let i = 1
+  while (true) {
+    const cand = path.join(dir, `${stem}_restore_${i}${ext}`)
+    if (!fs.existsSync(cand)) return cand
+    i += 1
+  }
+}
+
+ipcMain.handle('undo-last-export', async (_evt, payload) => {
+  try {
+    const outputDir = path.resolve(String(payload?.outputDir || ''))
+    if (!outputDir || outputDir === '/') {
+      return { ok: false, error: '출력 폴더가 유효하지 않습니다.' }
+    }
+
+    const summaryPath = path.join(outputDir, 'review_apply_summary.json')
+    if (!fs.existsSync(summaryPath)) {
+      return { ok: false, error: '되돌릴 요약 파일이 없습니다. (review_apply_summary.json)' }
+    }
+
+    const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8') || '{}')
+    const logged = Number(summary.operations_logged || 0)
+    if (!logged || logged <= 0) {
+      return { ok: false, error: '직전 적용 이력이 없습니다.' }
+    }
+
+    const manifestPath = String(summary.manifest_path || path.join(outputDir, 'review_apply_manifest.jsonl'))
+    if (!fs.existsSync(manifestPath)) {
+      return { ok: false, error: '되돌릴 매니페스트 파일이 없습니다.' }
+    }
+
+    const lines = fs
+      .readFileSync(manifestPath, 'utf-8')
+      .split(/\r?\n/)
+      .map((x) => x.trim())
+      .filter(Boolean)
+
+    if (lines.length < logged) {
+      return { ok: false, error: `매니페스트 기록 부족: needed=${logged}, actual=${lines.length}` }
+    }
+
+    const batch = lines.slice(-logged).map((line) => JSON.parse(line))
+    const result = { moved_back: 0, removed: 0, skipped: 0, errors: [] }
+
+    for (const op of batch.reverse()) {
+      try {
+        if (op?.op === 'copy') {
+          if (op.dst && fs.existsSync(op.dst) && fs.statSync(op.dst).isFile()) {
+            fs.unlinkSync(op.dst)
+            result.removed += 1
+          } else {
+            result.skipped += 1
+          }
+          continue
+        }
+
+        if (op?.op === 'move') {
+          if (!op.dst || !fs.existsSync(op.dst)) {
+            result.skipped += 1
+            continue
+          }
+          const target = resolveRollbackPath(String(op.src || ''))
+          fs.mkdirSync(path.dirname(target), { recursive: true })
+          fs.renameSync(op.dst, target)
+          result.moved_back += 1
+          continue
+        }
+
+        result.skipped += 1
+      } catch (e) {
+        result.errors.push(String(e))
+      }
+    }
+
+    const remained = lines.slice(0, -logged)
+    fs.writeFileSync(manifestPath, remained.length ? `${remained.join('\n')}\n` : '', 'utf-8')
+
+    const newSummary = {
+      ...summary,
+      operations_logged: 0,
+      last_undo: {
+        at: new Date().toISOString(),
+        ...result,
+        undone_count: logged,
+      },
+    }
+    fs.writeFileSync(summaryPath, JSON.stringify(newSummary, null, 2), 'utf-8')
+    return { ok: true, summary: newSummary }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+
 ipcMain.handle('startup-warmup', async (evt) => {
   const root = getProjectRoot()
   const notify = (payload) => evt.sender.send('startup-progress', payload)
