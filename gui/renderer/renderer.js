@@ -160,6 +160,32 @@ function persistRecent() {
   localStorage.setItem(RECENT_KEY, JSON.stringify(getSettingFromUI()))
 }
 
+async function refreshUndoAvailability() {
+  const btn = $('undoLast')
+  if (!btn) return
+
+  const outputDir = $('outputDir')?.value?.trim() || ''
+  if (!outputDir) {
+    btn.disabled = true
+    btn.title = '출력 폴더를 먼저 지정해 주세요.'
+    return
+  }
+
+  try {
+    const st = await window.photoforge.undoStatus({ outputDir })
+    const canUndo = Boolean(st?.ok && st?.canUndo)
+    btn.disabled = !canUndo
+    if (canUndo) {
+      btn.title = `직전 적용 ${Number(st?.operationsLogged || 0)}건 되돌리기`
+    } else {
+      btn.title = '되돌릴 직전 적용 이력이 없습니다.'
+    }
+  } catch {
+    btn.disabled = true
+    btn.title = '되돌리기 상태 확인 실패'
+  }
+}
+
 function restoreRecent() {
   try {
     const raw = localStorage.getItem(RECENT_KEY) || '{}'
@@ -900,11 +926,21 @@ $('pickOutput').addEventListener('click', async () => {
   const dir = await window.photoforge.pickFolder()
   if (dir) $('outputDir').value = dir
   persistRecent()
+  await refreshUndoAvailability()
 })
 
 $('openOut').addEventListener('click', async () => {
   const p = $('outputDir').value.trim()
   if (p) await window.photoforge.openPath(p)
+})
+
+$('outputDir').addEventListener('change', async () => {
+  persistRecent()
+  await refreshUndoAvailability()
+})
+$('outputDir').addEventListener('blur', async () => {
+  persistRecent()
+  await refreshUndoAvailability()
 })
 
 $('undoLast').addEventListener('click', async () => {
@@ -919,9 +955,11 @@ $('undoLast').addEventListener('click', async () => {
   const res = await window.photoforge.undoLastExport({ outputDir })
   if (!res?.ok) {
     $('log').textContent = `되돌리기 실패\n${res?.error || ''}`
+    await refreshUndoAvailability()
     return
   }
   $('log').textContent = `되돌리기 완료\n${JSON.stringify(res.summary?.last_undo || {}, null, 2)}`
+  await refreshUndoAvailability()
 })
 
 const githubIconBtn = $('githubIconBtn')
@@ -983,6 +1021,7 @@ $('confirmReview').addEventListener('click', async () => {
 
   closeReview()
   $('log').textContent = `적용 완료\n${JSON.stringify(result.summary || {}, null, 2)}`
+  await refreshUndoAvailability()
 })
 
 $('runBtn').addEventListener('click', async () => {
@@ -1093,4 +1132,5 @@ document.addEventListener('keydown', (e) => {
 })
 
 restoreRecent()
+refreshUndoAvailability()
 runStartupWarmupUI()

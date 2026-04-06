@@ -198,6 +198,26 @@ function resolveRollbackPath(originalPath) {
   }
 }
 
+ipcMain.handle('undo-status', async (_evt, payload) => {
+  try {
+    const outputDir = path.resolve(String(payload?.outputDir || ''))
+    if (!outputDir || outputDir === '/') {
+      return { ok: true, canUndo: false, reason: 'invalid_output_dir' }
+    }
+
+    const summaryPath = path.join(outputDir, 'review_apply_summary.json')
+    if (!fs.existsSync(summaryPath)) {
+      return { ok: true, canUndo: false, reason: 'summary_not_found' }
+    }
+
+    const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf-8') || '{}')
+    const logged = Number(summary.operations_logged || 0)
+    return { ok: true, canUndo: logged > 0, operationsLogged: logged, summary }
+  } catch (e) {
+    return { ok: true, canUndo: false, reason: 'status_error', error: String(e) }
+  }
+})
+
 ipcMain.handle('undo-last-export', async (_evt, payload) => {
   try {
     const outputDir = path.resolve(String(payload?.outputDir || ''))
