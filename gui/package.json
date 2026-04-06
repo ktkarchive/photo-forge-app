@@ -1,6 +1,6 @@
 {
   "name": "photo-forge-gui",
-  "version": "0.1.0-beta1",
+  "version": "0.0.1",
   "private": true,
   "description": "Photo Forge macOS GUI (Stitch-guided Carbon Dark)",
   "main": "main.cjs",

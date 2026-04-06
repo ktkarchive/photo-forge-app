@@ -163,6 +163,14 @@ body {
   line-height: 1;
 }
 
+.brandVersion {
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: #9ea6b3;
+  line-height: 1;
+}
+
 .socialIconBtn {
   width: 18px;
   height: 18px;
