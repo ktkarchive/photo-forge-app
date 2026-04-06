@@ -21,11 +21,25 @@ body {
 }
 
 .startupCard {
-  width: min(420px, 88vw);
+  width: min(430px, 90vw);
+  min-height: 360px;
   border: 1px solid #393939;
   border-radius: 12px;
   background: #1f1f1f;
-  padding: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.startupLogo {
+  width: 118px;
+  height: 118px;
+  border-radius: 24px;
+  object-fit: cover;
+  border: 1px solid #4a4a4a;
+  margin-bottom: 14px;
 }
 
 .startupTitle {
@@ -33,6 +47,7 @@ body {
   font-weight: 700;
   color: #d0e2ff;
   margin-bottom: 10px;
+  text-align: center;
 }
 
 .startupMessage {
@@ -92,20 +107,54 @@ body {
 }
 
 .logoSlot {
-  height: 60px;
-  border: 1px dashed #525252;
+  height: 106px;
+  border: 1px solid #2f2f2f;
   border-radius: 10px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #d0e2ff;
-  font-weight: 700;
+  justify-content: flex-start;
+  background: #000000;
+  padding: 8px 12px;
 }
 
-.logoSub {
-  margin-top: 6px;
+.logoBrandRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.sideLogo {
+  width: 86px;
+  height: 86px;
+  border-radius: 18px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+
+.brandTitle {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #f6f8ff;
+  line-height: 1.06;
+}
+
+.brandBy {
+  margin-top: 4px;
   font-size: 12px;
-  color: #a8a8a8;
+  letter-spacing: 0.6px;
+  color: #b8bfcb;
+  line-height: 1;
 }
 
 .leftCenter {
@@ -262,8 +311,7 @@ body {
 .reviewGrid.view-list .filename { font-size: 10px; }
 .reviewGrid.view-list .chips { margin-top: 1px; gap: 2px; }
 .reviewGrid.view-list .chip { font-size: 8px; padding: 1px 3px; }
-.reviewGrid.view-list .smallActions { margin-top: 0; gap: 3px; }
-.reviewGrid.view-list .smallActions button { font-size: 10px; padding: 3px 5px; }
+.reviewGrid.view-list .smallActions { display: none; }
 
 .meta { margin-top: 4px; }
 .filename { font-size: 11px; color: #f4f4f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -306,7 +354,7 @@ body {
 }
 .smallActions { display: flex; gap: 6px; margin-top: 8px; }
 .smallActions button { flex: 1; font-size: 11px; padding: 6px 8px; }
-.smallActions button.sel { border-color: #0f62fe; color: #d0e2ff; }
+.smallActions button.sel { border-color: #7a7a7a; color: #f4f4f4; }
 .reviewActions { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
 
 .emptyCenter {
@@ -398,6 +446,7 @@ body {
   margin-top: 10px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .groupCard {
@@ -407,6 +456,11 @@ body {
 .smallMuted {
   font-size: 12px;
   color: #a8a8a8;
+}
+
+#groupDelta {
+  margin-top: 4px;
+  color: #c6c6c6;
 }
 
 .groupGrid {

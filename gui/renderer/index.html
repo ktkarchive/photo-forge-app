@@ -9,6 +9,7 @@
   <body>
     <div id="startupOverlay" class="startupOverlay">
       <div class="startupCard">
+        <img src="./assets/logo.png" alt="Photo Forge" class="startupLogo" />
         <div class="startupTitle">Photo Forge 준비중</div>
         <div id="startupMessage" class="startupMessage">앱 초기화 중...</div>
         <div class="startupBar"><div id="startupBarFill" class="startupBarFill"></div></div>
@@ -19,8 +20,15 @@
     <div class="layout3">
       <aside class="leftPane">
         <div class="leftTop">
-          <div class="logoSlot">Photo Forge</div>
-          <div class="logoSub">로고/브랜드 영역</div>
+          <div class="logoSlot">
+            <div class="logoBrandRow">
+              <img src="./assets/logo.png" alt="Photo Forge" class="sideLogo" />
+              <div class="brandText">
+                <div class="brandTitle">Photo Forge</div>
+                <div class="brandBy">by ktk.archive</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="leftCenter">
@@ -150,8 +158,10 @@
         <div class="settingsBody">
           <div id="groupMeta" class="smallMuted">-</div>
           <div id="groupGrid" class="groupGrid"></div>
+          <div id="groupDelta" class="smallMuted"></div>
         </div>
         <div class="settingsFoot">
+          <button id="groupRecommend" class="ghost">자동 추천</button>
           <button id="groupApply" class="primary">대표로 지정</button>
         </div>
       </div>

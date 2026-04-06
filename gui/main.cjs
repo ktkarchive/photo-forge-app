@@ -156,10 +156,12 @@ function countJpegFiles(inputDir) {
 }
 
 function createWindow() {
+  const iconPng = path.join(__dirname, 'renderer', 'assets', 'logo.png')
   const win = new BrowserWindow({
     width: 1240,
     height: 900,
     backgroundColor: '#161616',
+    icon: fs.existsSync(iconPng) ? iconPng : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

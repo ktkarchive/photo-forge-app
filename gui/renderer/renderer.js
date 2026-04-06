@@ -5,17 +5,17 @@ for (const id of ids) {
   const el = $(id)
   const out = $(`${id}Val`)
   if (!el || !out) continue
-  el.addEventListener('input', async () => {
+  el.addEventListener('input', () => {
     out.textContent = el.value
     persistRecent()
 
-    if (!$('reviewPanel').classList.contains('hidden')) {
-      if (id === 'dup') {
-        await recomputeBurstDuplicateGroupsWithProgress()
-      }
-      recomputeDecisionsByStrength()
-      renderReviewGrid()
+    if ($('reviewPanel').classList.contains('hidden')) return
+    if (id === 'dup') {
+      scheduleRegroupAndRender(70)
+      return
     }
+    recomputeDecisionsByStrength()
+    renderReviewGrid()
   })
 }
 
@@ -34,6 +34,7 @@ let activeFile = ''
 let analyzeProgress = { running: false, current: 0, total: 0 }
 let analyzeStartedAt = 0
 let regroupToken = 0
+let regroupTimer = null
 let groupModalState = { groupId: '', selectedFile: '' }
 
 const defaultPresets = {
@@ -95,6 +96,16 @@ function duplicateLevelToBurstSec(level) {
   if (n <= 1) return 2.5
   if (n === 2) return 5.0
   return 7.5
+}
+
+function scheduleRegroupAndRender(delayMs = 70) {
+  if (regroupTimer) clearTimeout(regroupTimer)
+  regroupTimer = setTimeout(async () => {
+    regroupTimer = null
+    await recomputeBurstDuplicateGroupsWithProgress()
+    recomputeDecisionsByStrength()
+    renderReviewGrid()
+  }, Math.max(0, Number(delayMs || 0)))
 }
 
 function loadPresets() {
@@ -248,15 +259,45 @@ function hammingDistance64BigInt(a, b) {
   return c
 }
 
-function withinBurstWindow(item, rep, windowSec) {
-  if (windowSec <= 0) return true
+function getScoreNum(item, key) {
+  return Number(item?._scoresObj?.[key] || 0)
+}
+
+function timestampGapSec(item, rep) {
   if (item.capture_ts_source === 'exif' && rep.capture_ts_source === 'exif') {
     const t1 = Number(item.capture_ts || 0)
     const t2 = Number(rep.capture_ts || 0)
-    if (!Number.isFinite(t1) || !Number.isFinite(t2)) return true
-    return Math.abs(t1 - t2) <= windowSec
+    if (Number.isFinite(t1) && Number.isFinite(t2)) return Math.abs(t1 - t2)
   }
-  return true
+  return null
+}
+
+function dynamicDupThreshold(item, rep, baseThreshold, windowSec) {
+  const gap = timestampGapSec(item, rep)
+  if (gap === null || windowSec <= 0) return baseThreshold
+  const ratio = Math.min(1, gap / windowSec)
+  const penalty = Math.round(ratio * 4)
+  return Math.max(4, baseThreshold - penalty)
+}
+
+function isLikelySceneShift(item, rep) {
+  const expGap = Math.abs(getScoreNum(item, 'exposure_score') - getScoreNum(rep, 'exposure_score'))
+  const focusGap = Math.abs(getScoreNum(item, 'focus_delta') - getScoreNum(rep, 'focus_delta'))
+  const blurA = getScoreNum(item, 'laplacian_var')
+  const blurB = getScoreNum(rep, 'laplacian_var')
+  const blurRatio = (Math.max(blurA, blurB) + 1) / (Math.min(blurA, blurB) + 1)
+
+  if (expGap >= 70) return true
+  if (focusGap >= 70) return true
+  if (blurRatio >= 4.2) return true
+  return false
+}
+
+function withinBurstWindow(item, rep, windowSec) {
+  if (windowSec <= 0) return true
+  const gap = timestampGapSec(item, rep)
+  if (gap === null) return true
+  return gap <= windowSec
 }
 
 function qualityPenaltyFromBaseReasons(item) {
@@ -286,6 +327,15 @@ function isBetterRepresentative(candidate, current) {
   if (cFocus !== pFocus) return cFocus > pFocus
 
   return String(candidate.file || '') < String(current.file || '')
+}
+
+function pickBestRepresentative(members) {
+  if (!Array.isArray(members) || members.length === 0) return null
+  let best = members[0]
+  for (let i = 1; i < members.length; i += 1) {
+    if (isBetterRepresentative(members[i], best)) best = members[i]
+  }
+  return best
 }
 
 async function recomputeBurstDuplicateGroupsWithProgress() {
@@ -339,7 +389,9 @@ async function recomputeBurstDuplicateGroupsWithProgress() {
       const rep = g.rep
       if (!withinBurstWindow(item, rep, burstWindowSec)) continue
       const hd = hammingDistance64BigInt(item._hashBI, rep._hashBI)
-      if (hd <= dupThreshold) {
+      const effThreshold = dynamicDupThreshold(item, rep, dupThreshold, burstWindowSec)
+      const sceneShift = isLikelySceneShift(item, rep)
+      if (hd <= effThreshold && !sceneShift) {
         g.members.push(item)
         matched = true
         if (isBetterRepresentative(item, rep)) g.rep = item
@@ -348,8 +400,12 @@ async function recomputeBurstDuplicateGroupsWithProgress() {
     }
     if (!matched) groups.push({ rep: item, members: [item] })
 
-    setAnalyzeProgress(true, i + 1, total, '재분류중')
-    await new Promise((r) => setTimeout(r, 0))
+    if (i === 0 || i === total - 1 || i % 12 === 0) {
+      setAnalyzeProgress(true, i + 1, total, '재분류중')
+    }
+    if (i % 36 === 0) {
+      await new Promise((r) => setTimeout(r, 0))
+    }
   }
   setAnalyzeProgress(false, 0, 0)
 
@@ -380,6 +436,34 @@ async function recomputeBurstDuplicateGroupsWithProgress() {
 
 function getGroupMembers(groupId) {
   return modalItems.filter((x) => x._dupGroupId === groupId)
+}
+
+function summarizeGroupCandidate(groupId, repFile) {
+  const members = getGroupMembers(groupId)
+  if (!members.length) return ''
+
+  const current = members.find((m) => m._dupGroupRep) || members[0]
+  const next = members.find((m) => m.file === repFile) || current
+
+  const curPenalty = qualityPenaltyFromBaseReasons(current)
+  const nextPenalty = qualityPenaltyFromBaseReasons(next)
+  const curBlur = getScoreNum(current, 'laplacian_var').toFixed(1)
+  const nextBlur = getScoreNum(next, 'laplacian_var').toFixed(1)
+  const curFocus = getScoreNum(current, 'focus_delta').toFixed(1)
+  const nextFocus = getScoreNum(next, 'focus_delta').toFixed(1)
+
+  const changed = current.file === next.file ? '현재 대표 유지' : `대표 변경: ${current.file.split('/').pop()} -> ${next.file.split('/').pop()}`
+  return `${changed} | 페널티 ${curPenalty} -> ${nextPenalty}, 선명도 ${curBlur} -> ${nextBlur}, 초점 ${curFocus} -> ${nextFocus}`
+}
+
+function updateGroupDeltaPreview() {
+  const deltaEl = $('groupDelta')
+  if (!deltaEl) return
+  if (!groupModalState.groupId) {
+    deltaEl.textContent = ''
+    return
+  }
+  deltaEl.textContent = summarizeGroupCandidate(groupModalState.groupId, groupModalState.selectedFile)
 }
 
 function rebuildGroupWithRepresentative(groupId, repFile) {
@@ -413,6 +497,7 @@ function renderGroupModal() {
   const members = getGroupMembers(groupModalState.groupId)
   const grid = $('groupGrid')
   grid.innerHTML = ''
+  const recommended = pickBestRepresentative(members)
   for (const m of members) {
     const card = document.createElement('div')
     card.className = `groupItem ${m.file === groupModalState.selectedFile ? 'sel' : ''}`
@@ -431,7 +516,9 @@ function renderGroupModal() {
     const name = document.createElement('div')
     name.className = 'groupItemName'
     const base = m.file.split('/').pop()
-    name.textContent = `${m._dupGroupRep ? '대표 · ' : ''}${base}`
+    const repTag = m._dupGroupRep ? '대표 · ' : ''
+    const recTag = recommended && recommended.file === m.file ? '추천 · ' : ''
+    name.textContent = `${repTag}${recTag}${base}`
 
     card.appendChild(stage)
     card.appendChild(name)
@@ -441,6 +528,8 @@ function renderGroupModal() {
     })
     grid.appendChild(card)
   }
+
+  updateGroupDeltaPreview()
 }
 
 function openGroupModal(groupId) {
@@ -456,6 +545,8 @@ function openGroupModal(groupId) {
 function closeGroupModal() {
   $('groupModal').classList.add('hidden')
   groupModalState = { groupId: '', selectedFile: '' }
+  const deltaEl = $('groupDelta')
+  if (deltaEl) deltaEl.textContent = ''
 }
 
 function recomputeDecisionsByStrength() {
@@ -521,7 +612,7 @@ function reasonChips(item, scores, totalScore) {
   }
 
   const showOnlyIssues = viewMode === 'small' || viewMode === 'list'
-  const scoreBox = `<span class="chip total-score" title="종합 점수">${totalScore}</span>`
+  const scoreBox = showOnlyIssues ? '' : `<span class="chip total-score" title="종합 점수">${totalScore}</span>`
 
   const issueTags = ['눈감', '초점', '블러', '노출', '중복']
     .filter((x) => (showOnlyIssues ? (scores[x] || 0) > 0 : true))
@@ -566,6 +657,11 @@ function getDisplayedItems() {
   let items = [...modalItems]
   if (reviewFilter === 'approve') items = items.filter((x) => x.decision === 'approve')
   if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
+
+  // 공간이 작은 보기에서는 문제 컷 중심으로 표시
+  if (reviewFilter === 'all' && (viewMode === 'small' || viewMode === 'list')) {
+    items = items.filter((x) => itemScore(x) > 0)
+  }
 
   items.sort((a, b) => {
     if (reviewFilter === 'all') return a.file.localeCompare(b.file)
@@ -739,11 +835,22 @@ $('groupCancel').addEventListener('click', closeGroupModal)
 $('groupModal').addEventListener('click', (e) => {
   if (e.target.id === 'groupModal') closeGroupModal()
 })
+$('groupRecommend').addEventListener('click', () => {
+  if (!groupModalState.groupId) return
+  const members = getGroupMembers(groupModalState.groupId)
+  const best = pickBestRepresentative(members)
+  if (!best) return
+  groupModalState.selectedFile = best.file
+  renderGroupModal()
+})
+
 $('groupApply').addEventListener('click', () => {
   if (!groupModalState.groupId || !groupModalState.selectedFile) return
+  const msg = summarizeGroupCandidate(groupModalState.groupId, groupModalState.selectedFile)
   rebuildGroupWithRepresentative(groupModalState.groupId, groupModalState.selectedFile)
   recomputeDecisionsByStrength()
   renderReviewGrid()
+  $('log').textContent = `[중복대표] ${msg}`
   closeGroupModal()
 })
 
