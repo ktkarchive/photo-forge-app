@@ -1,0 +1,81 @@
+{
+  "set": "S06_user_test",
+  "input_dir": "/Users/teykim/Library/CloudStorage/SynologyDrive-project/photo-forge/tests/samplesets/S06_user_test/input",
+  "sample_count": 1,
+  "profiles": [
+    {
+      "profile": "conservative",
+      "levels": {
+        "eyes": 1,
+        "focus": 1,
+        "blur": 1,
+        "exposure": 1,
+        "duplicate": 1
+      },
+      "exit": 0,
+      "elapsed_sec": 0.7,
+      "total": 1,
+      "keep": 0,
+      "reject": 1,
+      "review": 0,
+      "reject_ratio": 1.0,
+      "class_counts": {
+        "reject": 1
+      },
+      "reason_counts": {
+        "motion_blur": 1
+      },
+      "stderr": ""
+    },
+    {
+      "profile": "balanced",
+      "levels": {
+        "eyes": 2,
+        "focus": 2,
+        "blur": 1,
+        "exposure": 1,
+        "duplicate": 2
+      },
+      "exit": 0,
+      "elapsed_sec": 0.71,
+      "total": 1,
+      "keep": 0,
+      "reject": 1,
+      "review": 0,
+      "reject_ratio": 1.0,
+      "class_counts": {
+        "reject": 1
+      },
+      "reason_counts": {
+        "motion_blur": 1
+      },
+      "stderr": ""
+    },
+    {
+      "profile": "aggressive",
+      "levels": {
+        "eyes": 3,
+        "focus": 3,
+        "blur": 2,
+        "exposure": 2,
+        "duplicate": 3
+      },
+      "exit": 0,
+      "elapsed_sec": 0.71,
+      "total": 1,
+      "keep": 0,
+      "reject": 1,
+      "review": 0,
+      "reject_ratio": 1.0,
+      "class_counts": {
+        "reject": 1
+      },
+      "reason_counts": {
+        "motion_blur": 1
+      },
+      "stderr": ""
+    }
+  ],
+  "recommendation": "insufficient_data",
+  "minimum_recommended_samples": 20
+}

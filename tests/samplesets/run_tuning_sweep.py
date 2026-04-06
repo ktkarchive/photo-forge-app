@@ -11,12 +11,13 @@ SETS = [
     "S03_duplicates_burst",
     "S04_edge_cases",
     "S05_real_lite",
+    "S06_user_test",
 ]
 
 PROFILES = {
-    "conservative": {"eyes": 1, "focus": 1, "blur": 1, "exposure": 1, "duplicate": 0},
-    "balanced": {"eyes": 2, "focus": 2, "blur": 1, "exposure": 1, "duplicate": 1},
-    "aggressive": {"eyes": 3, "focus": 3, "blur": 2, "exposure": 2, "duplicate": 2},
+    "conservative": {"eyes": 1, "focus": 1, "blur": 1, "exposure": 1, "duplicate": 1},
+    "balanced": {"eyes": 2, "focus": 2, "blur": 1, "exposure": 1, "duplicate": 2},
+    "aggressive": {"eyes": 3, "focus": 3, "blur": 2, "exposure": 2, "duplicate": 3},
 }
 
 
@@ -94,7 +95,7 @@ def main():
     lines = []
     lines.append("# Photo Forge QA 튜닝 리포트 3차")
     lines.append("")
-    lines.append("범위: S01~S05, dry-run, 프로파일 3종 비교")
+    lines.append("범위: S01~S06(로컬), dry-run, 프로파일 3종 비교")
     lines.append("")
     lines.append("## 프로파일별 총괄")
     lines.append("| Profile | Total | Reject | Review | Reject ratio | Review ratio | OK sets |")
@@ -105,8 +106,8 @@ def main():
 
     lines.append("")
     lines.append("## 권장")
-    lines.append("- 베타 기본값: balanced (eyes=2, focus=2, blur=1, exposure=1, duplicate=1)")
-    lines.append("- 이유: conservative 대비 저품질 컷 배제율이 높고, aggressive 대비 과도한 reject 리스크 완화")
+    lines.append("- 베타 기본값: balanced (eyes=2, focus=2, blur=1, exposure=1, duplicate=2)")
+    lines.append("- 이유: conservative/aggressive와 비교 시 과거절 리스크를 추가 확대하지 않으면서 중복 억제를 유지")
     lines.append("")
     lines.append("세부 결과 JSON: QA_TUNING_SWEEP_3.json")
 
