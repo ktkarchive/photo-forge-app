@@ -13,35 +13,35 @@ Photo Forge CLI (MVP)
 
 실행 예시
 - 기본 실행
-  python -m ktk_select.cli run --input ./photos --output ./out
+  python -m photo_forge.cli run --input ./photos --output ./out
 
 - 항목별 강도 (0=off, 1=하, 2=중, 3=상)
-  python -m ktk_select.cli run --input ./photos --output ./out \
+  python -m photo_forge.cli run --input ./photos --output ./out \
     --eyes-level 2 --focus-level 2 --blur-level 1 --exposure-level 1 --duplicate-level 0
 
 - 공격적 제외
-  python -m ktk_select.cli run --input ./photos --output ./out \
+  python -m photo_forge.cli run --input ./photos --output ./out \
     --eyes-level 3 --focus-level 3 --blur-level 3 --exposure-level 3 --duplicate-level 3
 
 - AI 옵션(Codex auth/API 키)
-  python -m ktk_select.cli run --input ./photos --output ./out \
+  python -m photo_forge.cli run --input ./photos --output ./out \
     --ai-mode smart --api-provider codex --ai-model gpt-4.1-mini --max-ai-calls 300
 
 - report mode(리포트만 생성, 파일 복사/이동 없음)
-  python -m ktk_select.cli run --input ./photos --output ./out --export-mode report
+  python -m photo_forge.cli run --input ./photos --output ./out --export-mode report
 
 - copy mode(기본: 원본 유지 + 출력 폴더 복사)
-  python -m ktk_select.cli run --input ./photos --output ./out --export-mode copy
+  python -m photo_forge.cli run --input ./photos --output ./out --export-mode copy
 
 - move mode(원본을 출력 폴더로 이동, 안전확인 필요)
-  python -m ktk_select.cli run --input ./photos --output ./out --export-mode move --confirm-move
+  python -m photo_forge.cli run --input ./photos --output ./out --export-mode move --confirm-move
 
 - 파일명 충돌 정책
-  python -m ktk_select.cli run --input ./photos --output ./out --export-mode copy --conflict-policy rename
+  python -m photo_forge.cli run --input ./photos --output ./out --export-mode copy --conflict-policy rename
   (선택: rename | skip | overwrite)
 
 - 단일 파일 설명
-  python -m ktk_select.cli explain --file ./photos/IMG_0001.JPG --eyes-level 2 --focus-level 2
+  python -m photo_forge.cli explain --file ./photos/IMG_0001.JPG --eyes-level 2 --focus-level 2
 
 출력물
 - output/result.csv

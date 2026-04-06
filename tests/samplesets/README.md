@@ -33,4 +33,4 @@ Photo Forge 샘플셋 표준 구조
 - 성능 측정은 같은 하드웨어/같은 옵션으로 기록
 
 권장 실행 예시
-- python -m ktk_select.cli run --input tests/samplesets/S01_portrait_mixed/input --output /tmp/ktk_s01 --dry-run
+- python -m photo_forge.cli run --input tests/samplesets/S01_portrait_mixed/input --output /tmp/photo_forge_s01 --dry-run

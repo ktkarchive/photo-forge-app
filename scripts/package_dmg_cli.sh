@@ -47,7 +47,7 @@ cat <<MSG
 - 앱 경로: $APP
 - 가상환경: $VENV
 다음 실행: run.command 더블클릭 또는 아래 명령
-$VENV/bin/python -m ktk_select.cli --help
+$VENV/bin/python -m photo_forge.cli --help
 MSG
 EOF
 
@@ -65,7 +65,7 @@ fi
 
 source "$VENV/bin/activate"
 cd "$APP"
-python -m ktk_select.cli "$@"
+python -m photo_forge.cli "$@"
 EOF
 
 cat > "$APP_DIR/README.txt" <<EOF
@@ -75,7 +75,7 @@ Photo Forge macOS CLI 배포 패키지 (${VERSION})
 2) run.command 더블클릭 또는 터미널에서 CLI 실행
 
 예시:
-python -m ktk_select.cli run --input /path/to/photos --output /path/to/out --dry-run
+python -m photo_forge.cli run --input /path/to/photos --output /path/to/out --dry-run
 
 주의:
 - 본 패키지는 CLI 베타입니다.

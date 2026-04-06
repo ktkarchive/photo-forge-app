@@ -211,8 +211,8 @@ ipcMain.handle('analyze-for-review', async (evt, payload) => {
     return { ok: false, code: 'NO_FILES', stdout: '', stderr: '파일 없음.' }
   }
 
-  const tempOut = path.join(payload.outputDir, '.ktk_review_tmp')
-  const args = ['-m', 'ktk_select.cli', 'run', '--input', payload.inputDir, '--output', tempOut]
+  const tempOut = path.join(payload.outputDir, '.photo_forge_review_tmp')
+  const args = ['-m', 'photo_forge.cli', 'run', '--input', payload.inputDir, '--output', tempOut]
   args.push('--eyes-level', String(payload.levels?.eyes_closed ?? 2))
   args.push('--focus-level', String(payload.levels?.out_of_focus_subject ?? 2))
   args.push('--blur-level', String(payload.levels?.motion_blur ?? 1))

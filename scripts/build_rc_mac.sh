@@ -20,7 +20,7 @@ python -m pip install --upgrade pip
 python -m pip install -r "$ROOT_DIR/requirements.txt"
 
 # sanity
-python -m ktk_select.cli --help >/dev/null
+python -m photo_forge.cli --help >/dev/null
 
 cp "$ROOT_DIR/README.txt" "$STAGE_DIR/README.txt"
 cp "$ROOT_DIR/config.example.yaml" "$STAGE_DIR/config.example.yaml"
@@ -29,7 +29,7 @@ cp -R "$ROOT_DIR/scripts" "$STAGE_DIR/scripts"
 cat > "$STAGE_DIR/run.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-python3 -m ktk_select.cli "$@"
+python3 -m photo_forge.cli "$@"
 EOF
 chmod +x "$STAGE_DIR/run.sh"
 

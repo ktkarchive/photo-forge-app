@@ -16,10 +16,8 @@ dependencies = [
 ]
 
 [project.scripts]
-photo-forge = "ktk_select.cli:main"
-photoforge = "ktk_select.cli:main"
-ktk-select = "ktk_select.cli:main"
-ktk.select = "ktk_select.cli:main"
+photo-forge = "photo_forge.cli:main"
+photoforge = "photo_forge.cli:main"
 
 [tool.setuptools]
-packages = ["ktk_select"]
+packages = ["photo_forge"]

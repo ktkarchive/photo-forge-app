@@ -15,7 +15,7 @@ EXPOSURE="${6:-2}"
 DUPLICATE="${7:-0}"
 
 python3 -m pip install -r requirements.txt
-python3 -m ktk_select.cli run \
+python3 -m photo_forge.cli run \
   --input "$INPUT_DIR" \
   --output "$OUTPUT_DIR" \
   --eyes-level "$EYES" \

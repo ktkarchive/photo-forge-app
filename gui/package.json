@@ -15,7 +15,7 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.ktk.photoforge.gui",
+    "appId": "com.photoforge.gui",
     "productName": "Photo Forge",
     "directories": {
       "output": "release"

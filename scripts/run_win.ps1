@@ -9,7 +9,7 @@ param(
 )
 
 python -m pip install -r requirements.txt
-python -m ktk_select.cli run `
+python -m photo_forge.cli run `
   --input "$InputDir" `
   --output "$OutputDir" `
   --eyes-level "$EyesLevel" `

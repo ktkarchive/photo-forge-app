@@ -21,8 +21,6 @@ for (const id of ids) {
 
 const PRESET_KEY = 'photoforge.presets.v1'
 const RECENT_KEY = 'photoforge.recent.v1'
-const LEGACY_PRESET_KEY = 'ktk.select.presets.v1'
-const LEGACY_RECENT_KEY = 'ktk.select.recent.v1'
 
 let modalItems = []
 let analysisSummary = {}
@@ -64,15 +62,15 @@ async function runStartupWarmupUI() {
   if (runBtn) runBtn.disabled = true
 
   let unsub = null
-  if (window.ktk?.onStartupProgress) {
-    unsub = window.ktk.onStartupProgress((p) => {
+  if (window.photoforge?.onStartupProgress) {
+    unsub = window.photoforge.onStartupProgress((p) => {
       setStartupOverlay(p?.percent || 0, p?.message || '초기화 중...')
     })
   }
 
   try {
     setStartupOverlay(3, '앱 초기화 중...')
-    const res = await window.ktk.startupWarmup()
+    const res = await window.photoforge.startupWarmup()
     if (!res?.ok) {
       setStartupOverlay(100, '초기화 일부 실패 (분석 시 재시도)')
       $('log').textContent = `[startup] 워밍업 실패\n${res?.error || ''}`
@@ -110,7 +108,7 @@ function scheduleRegroupAndRender(delayMs = 70) {
 
 function loadPresets() {
   try {
-    const raw = localStorage.getItem(PRESET_KEY) || localStorage.getItem(LEGACY_PRESET_KEY) || '{}'
+    const raw = localStorage.getItem(PRESET_KEY) || '{}'
     const v = JSON.parse(raw)
     return { ...defaultPresets, ...v }
   } catch {
@@ -163,7 +161,7 @@ function persistRecent() {
 
 function restoreRecent() {
   try {
-    const raw = localStorage.getItem(RECENT_KEY) || localStorage.getItem(LEGACY_RECENT_KEY) || '{}'
+    const raw = localStorage.getItem(RECENT_KEY) || '{}'
     const v = JSON.parse(raw)
     if (v.inputDir) $('inputDir').value = v.inputDir
     if (v.outputDir) $('outputDir').value = v.outputDir
@@ -725,7 +723,7 @@ function makeReviewCard(item) {
   img.className = 'thumb'
   img.src = `file://${item.file}`
   img.loading = 'lazy'
-  img.onclick = () => window.ktk.openPath(item.file)
+  img.onclick = () => window.photoforge.openPath(item.file)
 
   thumbMat.appendChild(img)
   thumbStage.appendChild(thumbMat)
@@ -854,8 +852,8 @@ $('groupApply').addEventListener('click', () => {
   closeGroupModal()
 })
 
-if (window.ktk?.onAnalyzeProgress) {
-  window.ktk.onAnalyzeProgress((p) => {
+if (window.photoforge?.onAnalyzeProgress) {
+  window.photoforge.onAnalyzeProgress((p) => {
     const running = !!p?.running
     const current = Number(p?.current || 0)
     const total = Number(p?.total || 0)
@@ -889,20 +887,20 @@ $('savePreset').addEventListener('click', () => {
 })
 
 $('pickInput').addEventListener('click', async () => {
-  const dir = await window.ktk.pickFolder()
+  const dir = await window.photoforge.pickFolder()
   if (dir) $('inputDir').value = dir
   persistRecent()
 })
 
 $('pickOutput').addEventListener('click', async () => {
-  const dir = await window.ktk.pickFolder()
+  const dir = await window.photoforge.pickFolder()
   if (dir) $('outputDir').value = dir
   persistRecent()
 })
 
 $('openOut').addEventListener('click', async () => {
   const p = $('outputDir').value.trim()
-  if (p) await window.ktk.openPath(p)
+  if (p) await window.photoforge.openPath(p)
 })
 
 $('reviewSort').addEventListener('change', () => {
@@ -942,7 +940,7 @@ $('confirmReview').addEventListener('click', async () => {
     if (!ok) return
   }
 
-  const result = await window.ktk.applyReviewExport({
+  const result = await window.photoforge.applyReviewExport({
     outputDir: s.outputDir,
     exportMode: s.exportMode,
     conflictPolicy: s.conflictPolicy,
@@ -970,7 +968,7 @@ $('runBtn').addEventListener('click', async () => {
   setAnalyzeProgress(true, 0, 0)
   persistRecent()
 
-  const analyzed = await window.ktk.analyzeForReview(s)
+  const analyzed = await window.photoforge.analyzeForReview(s)
   $('runBtn').disabled = false
 
   if (!analyzed.ok) {

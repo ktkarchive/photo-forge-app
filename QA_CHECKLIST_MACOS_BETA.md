@@ -10,7 +10,7 @@ Photo Forge macOS Beta QA Checklist
 
 A. 설치/실행
 - [ ] `python3 -m pip install -r requirements.txt` 성공
-- [ ] `python3 -m ktk_select.cli --help` 정상 출력
+- [ ] `python3 -m photo_forge.cli --help` 정상 출력
 - [ ] `scripts/run_mac.sh` 실행 성공
 
 B. 기본 분석 플로우

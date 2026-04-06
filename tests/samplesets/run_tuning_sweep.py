@@ -22,11 +22,11 @@ PROFILES = {
 
 def run_once(set_name: str, prof_name: str, lv: dict) -> dict:
     in_dir = ROOT / "tests" / "samplesets" / set_name / "input"
-    out_dir = Path("/tmp/ktk_tuning") / prof_name / set_name
+    out_dir = Path("/tmp/photo_forge_tuning") / prof_name / set_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cmd = [
-        "python3", "-m", "ktk_select.cli", "run",
+        "python3", "-m", "photo_forge.cli", "run",
         "--input", str(in_dir),
         "--output", str(out_dir),
         "--eyes-level", str(lv["eyes"]),

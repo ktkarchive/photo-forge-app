@@ -5,16 +5,16 @@ Photo Forge 실인물 평가 가이드 (4차)
 
 1) 예측 결과 생성
 - 예시:
-  python3 -m ktk_select.cli run \
+  python3 -m photo_forge.cli run \
     --input tests/samplesets/S05_real_lite/input \
-    --output /tmp/ktk_eval/S05 \
+    --output /tmp/photo_forge_eval/S05 \
     --eyes-level 2 --focus-level 2 --blur-level 1 --exposure-level 1 --duplicate-level 1 \
     --dry-run
 
 2) GT 템플릿 생성
 - 예시:
   python3 tests/eval/make_gt_template.py \
-    --pred /tmp/ktk_eval/S05/result.csv \
+    --pred /tmp/photo_forge_eval/S05/result.csv \
     --out tests/samplesets/S05_real_lite/ground_truth.template.csv
 
 3) 라벨링 규칙
@@ -26,7 +26,7 @@ Photo Forge 실인물 평가 가이드 (4차)
 4) 평가 실행
 - 예시:
   python3 tests/eval/evaluate_predictions.py \
-    --pred /tmp/ktk_eval/S05/result.csv \
+    --pred /tmp/photo_forge_eval/S05/result.csv \
     --gt tests/samplesets/S05_real_lite/ground_truth.labeled.csv \
     --out-json tests/samplesets/S05_real_lite/eval_result.json \
     --out-md tests/samplesets/S05_real_lite/eval_result.md

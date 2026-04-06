@@ -5,7 +5,7 @@ Photo Forge macOS 베타 릴리즈 역산 계획 (기준일: 2026-04-05)
 - 범위: macOS 우선, Photo Forge 단독 집중
 
 현재 상태 요약
-- ktk_select 네임스페이스 전환 완료
+- photo_forge 네임스페이스 전환 완료
 - bridge 연동(/photo-forge/run) 동작 확인 완료
 - UI 빌드/브리지 재기동/CLI 실행 기본 플로우 확인 완료
 - 남은 리스크: eyes_closed(미디어파이프 런타임 변동), 패키징/서명/노타리, 회귀 테스트
