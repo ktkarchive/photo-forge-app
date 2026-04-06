@@ -1,23 +1,18 @@
 const $ = (id) => document.getElementById(id)
 
-const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup', 'burstLevel']
+const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup']
 for (const id of ids) {
   const el = $(id)
   const out = $(`${id}Val`)
   if (!el || !out) continue
-  el.addEventListener('input', () => {
+  el.addEventListener('input', async () => {
     out.textContent = el.value
     persistRecent()
 
-    if (id === 'burstLevel') {
-      updateSelectionDetail(getActiveItem())
-      if (!$('reviewPanel').classList.contains('hidden')) {
-        $('log').textContent = '연사 값 변경은 재분석 후 반영됩니다. (분석실행 필요)'
-      }
-      return
-    }
-
     if (!$('reviewPanel').classList.contains('hidden')) {
+      if (id === 'dup') {
+        await recomputeBurstDuplicateGroupsWithProgress()
+      }
       recomputeDecisionsByStrength()
       renderReviewGrid()
     }
@@ -32,7 +27,7 @@ const LEGACY_RECENT_KEY = 'ktk.select.recent.v1'
 let modalItems = []
 let analysisSummary = {}
 let reviewFilter = 'all'
-let reviewSort = 'score_desc'
+let reviewSort = 'name_asc'
 let reviewMinScore = 0
 let viewMode = 'large'
 let activeFile = ''
@@ -42,18 +37,12 @@ let regroupToken = 0
 let groupModalState = { groupId: '', selectedFile: '' }
 
 const defaultPresets = {
-  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, burstLevel: 1 },
-  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1, burstLevel: 2 },
-  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2, burstLevel: 3 },
+  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 1 },
+  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 2 },
+  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 3 },
 }
 
-function burstLevelToSec(level) {
-  const n = Number(level || 0)
-  if (n <= 0) return 0.0
-  if (n === 1) return 0.8
-  if (n === 2) return 1.5
-  return 2.5
-}
+const DUP_BURST_WINDOW_SEC = 2.5
 
 function loadPresets() {
   try {
@@ -71,12 +60,11 @@ function savePresets(presets) {
 
 function applyLevelSet(levels) {
   const map = {
-    burstLevel: levels.burstLevel ?? 2,
     eyes: levels.eyes ?? levels.eyes_closed ?? 2,
     focus: levels.focus ?? levels.out_of_focus_subject ?? 2,
     blur: levels.blur ?? levels.motion_blur ?? 1,
     exposure: levels.exposure ?? levels.exposure_bad ?? 1,
-    dup: levels.dup ?? levels.duplicate ?? 1,
+    dup: levels.dup ?? levels.duplicate ?? 2,
   }
   for (const [k, v] of Object.entries(map)) {
     $(k).value = String(v)
@@ -85,15 +73,13 @@ function applyLevelSet(levels) {
 }
 
 function getSettingFromUI() {
-  const burstLevel = Number($('burstLevel').value || 0)
   return {
     inputDir: $('inputDir').value.trim(),
     outputDir: $('outputDir').value.trim(),
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
     compromise: 0,
-    burstLevel,
-    burstWindowSec: burstLevelToSec(burstLevel),
+    burstWindowSec: DUP_BURST_WINDOW_SEC,
     levels: {
       eyes_closed: Number($('eyes').value),
       out_of_focus_subject: Number($('focus').value),
@@ -121,8 +107,8 @@ function restoreRecent() {
       const radio = document.querySelector(`input[name="exportMode"][value="${v.exportMode}"]`)
       if (radio) radio.checked = true
     }
-    if (v.levels || typeof v.burstLevel !== 'undefined') {
-      applyLevelSet({ ...(v.levels || {}), burstLevel: v.burstLevel ?? 2 })
+    if (v.levels) {
+      applyLevelSet({ ...(v.levels || {}) })
     }
   } catch {}
 }
@@ -253,8 +239,9 @@ async function recomputeBurstDuplicateGroupsWithProgress() {
   const myToken = regroupToken
 
   const dupLevel = Number($('dup')?.value || 0)
-  const burstWindowSec = burstLevelToSec(Number($('burstLevel')?.value || 0))
-  const dupThreshold = Number(analysisSummary?.thresholds?.duplicate_hamming_max ?? 8)
+  const burstWindowSec = DUP_BURST_WINDOW_SEC
+  const dupBase = Number(analysisSummary?.thresholds?.duplicate_hamming_max ?? 8)
+  const dupThreshold = dupBase + (dupLevel <= 1 ? 2 : dupLevel === 2 ? 6 : 10)
 
   for (const item of modalItems) {
     if (!Array.isArray(item._baseRejectReasons)) {
@@ -378,7 +365,6 @@ function updateSelectionDetail(item) {
     $('detailPath').textContent = '-'
     $('detailDecision').textContent = '-'
     $('detailScore').textContent = '-'
-    $('detailBurst').textContent = '-'
     $('detailReason').textContent = '-'
     return
   }
@@ -389,22 +375,30 @@ function updateSelectionDetail(item) {
   const decisionLabel = item.decision === 'approve' ? '승인' : item.decision === 'reject' ? '거절' : '-'
   $('detailDecision').textContent = decisionLabel
   $('detailScore').textContent = String(itemScore(item))
-  $('detailBurst').textContent = `${$('burstLevel').value} (${burstLevelToSec($('burstLevel').value)}s)`
   $('detailReason').textContent = item.reject_reasons || item.review_reasons || '-'
 }
 
-function reasonChips(scores, totalScore) {
+function reasonChips(item, scores, totalScore) {
   const levelClass = (v) => {
     if (v >= 3) return 'lv3'
     if (v >= 2) return 'lv2'
     if (v >= 1) return 'lv1'
     return 'lv0'
   }
+
+  const showOnlyIssues = viewMode === 'small' || viewMode === 'list'
   const scoreBox = `<span class="chip total-score" title="종합 점수">${totalScore}</span>`
-  const tags = ['눈감', '초점', '블러', '노출', '중복']
-    .map((x) => `<span class="chip ${levelClass(scores[x] || 0)}">${x}</span>`)
+
+  const issueTags = ['눈감', '초점', '블러', '노출', '중복']
+    .filter((x) => (showOnlyIssues ? (scores[x] || 0) > 0 : true))
+    .map((x) => `<span class="chip issue ${levelClass(scores[x] || 0)}">${x}</span>`)
     .join('')
-  return `${scoreBox}${tags}`
+
+  const dupTag = item?._dupGroupSize > 1
+    ? `<span class="chip dup-group" title="중복/연사 그룹">중복 ${item._dupGroupSize}</span>`
+    : ''
+
+  return `${scoreBox}${issueTags}${dupTag}`
 }
 
 function applyCycleFilterButton() {
@@ -511,7 +505,7 @@ function makeReviewCard(item) {
 
   const meta = document.createElement('div')
   meta.className = 'meta'
-  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="chips">${reasonChips(sc, total)}</div>`
+  meta.innerHTML = `<div class="filename">${item.file.split('/').pop()}</div><div class="chips">${reasonChips(item, sc, total)}</div>`
 
   const toggles = document.createElement('div')
   toggles.className = 'smallActions'
@@ -559,7 +553,7 @@ function renderReviewGrid() {
   updateSelectionDetail(getActiveItem())
 }
 
-function openReview(items) {
+async function openReview(items) {
   modalItems = items
   reviewFilter = 'all'
   reviewSort = 'name_asc'
@@ -570,10 +564,12 @@ function openReview(items) {
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
   $('viewMode').value = viewMode
   applyCycleFilterButton()
-  recomputeDecisionsByStrength()
   activeFile = items[0]?.file || ''
   $('emptyCenter').classList.add('hidden')
   $('reviewPanel').classList.remove('hidden')
+
+  await recomputeBurstDuplicateGroupsWithProgress()
+  recomputeDecisionsByStrength()
   renderReviewGrid()
 }
 
@@ -606,11 +602,12 @@ if (window.ktk?.onAnalyzeProgress) {
   })
 }
 
-$('presetSelect').addEventListener('change', () => {
+$('presetSelect').addEventListener('change', async () => {
   const presets = loadPresets()
   applyLevelSet(presets[$('presetSelect').value] || presets.balanced)
   persistRecent()
   if (!$('reviewPanel').classList.contains('hidden')) {
+    await recomputeBurstDuplicateGroupsWithProgress()
     recomputeDecisionsByStrength()
     renderReviewGrid()
   }
@@ -619,7 +616,6 @@ $('presetSelect').addEventListener('change', () => {
 $('savePreset').addEventListener('click', () => {
   const presets = loadPresets()
   presets[$('presetSelect').value] = {
-    burstLevel: Number($('burstLevel').value),
     eyes: Number($('eyes').value),
     focus: Number($('focus').value),
     blur: Number($('blur').value),
@@ -728,11 +724,19 @@ $('runBtn').addEventListener('click', async () => {
   }
 
   const rows = analyzed.rows || []
+  analysisSummary = analyzed.summary || {}
   setAnalyzeProgress(false, rows.length, rows.length)
-  const items = rows.map((r) => ({ ...r, decision: 'approve' }))
+  const items = rows.map((r) => ({
+    ...r,
+    decision: 'approve',
+    _scoresObj: (() => {
+      try { return JSON.parse(r.scores || '{}') } catch { return {} }
+    })(),
+    _baseRejectReasons: splitReasons(r.reject_reasons).filter((x) => !isDuplicateReason(x)),
+  }))
 
   $('log').textContent = `분석 완료: total=${rows.length}. 중앙 영역에서 승인/거절 조정 후 확인을 누르세요.`
-  openReview(items)
+  await openReview(items)
 })
 
 $('conflictPolicy').addEventListener('change', persistRecent)
