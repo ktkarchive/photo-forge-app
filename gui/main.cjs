@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { spawn } = require('child_process')
 
 function getProjectRoot() {
@@ -18,6 +19,45 @@ function runProcess(cmd, args, opts = {}) {
   })
 }
 
+function runProcessWithProgress(cmd, args, opts = {}, onProgress = null) {
+  return new Promise((resolve) => {
+    const cp = spawn(cmd, args, opts)
+    let out = ''
+    let err = ''
+    let outBuf = ''
+    let errBuf = ''
+
+    const parseLines = (chunk, isErr) => {
+      const text = chunk.toString()
+      if (isErr) err += text
+      else out += text
+
+      let buf = (isErr ? errBuf : outBuf) + text
+      const lines = buf.split(/\r?\n/)
+      buf = lines.pop() || ''
+
+      for (const line of lines) {
+        const s = String(line || '').trim()
+        if (!s.startsWith('KTK_PROGRESS')) continue
+        // KTK_PROGRESS current/total
+        const payload = s.replace('KTK_PROGRESS', '').trim()
+        const m = payload.match(/^(\d+)\/(\d+)$/)
+        if (!m) continue
+        if (onProgress) {
+          onProgress({ current: Number(m[1]), total: Number(m[2]) })
+        }
+      }
+
+      if (isErr) errBuf = buf
+      else outBuf = buf
+    }
+
+    cp.stdout.on('data', (d) => parseLines(d, false))
+    cp.stderr.on('data', (d) => parseLines(d, true))
+    cp.on('close', (code) => resolve({ code, stdout: out, stderr: err }))
+  })
+}
+
 async function ensurePythonDeps(root) {
   const check = await runProcess('python3', ['-c', 'import cv2, numpy, mediapipe'], {
     cwd: root,
@@ -30,6 +70,30 @@ async function ensurePythonDeps(root) {
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   })
   return { ok: install.code === 0, checkErr: check.stderr, installOut: install.stdout, installErr: install.stderr }
+}
+
+function countJpegFiles(inputDir) {
+  if (!inputDir) return 0
+  const stack = [inputDir]
+  let count = 0
+  while (stack.length > 0) {
+    const cur = stack.pop()
+    let entries = []
+    try {
+      entries = fs.readdirSync(cur, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const ent of entries) {
+      const p = path.join(cur, ent.name)
+      if (ent.isDirectory()) stack.push(p)
+      else if (ent.isFile()) {
+        const ext = path.extname(ent.name).toLowerCase()
+        if (ext === '.jpg' || ext === '.jpeg') count += 1
+      }
+    }
+  }
+  return count
 }
 
 function createWindow() {
@@ -60,7 +124,7 @@ ipcMain.handle('open-path', async (_evt, p) => {
   return true
 })
 
-ipcMain.handle('analyze-for-review', async (_evt, payload) => {
+ipcMain.handle('analyze-for-review', async (evt, payload) => {
   const root = getProjectRoot()
   const prep = await ensurePythonDeps(root)
   if (!prep.ok) {
@@ -70,6 +134,12 @@ ipcMain.handle('analyze-for-review', async (_evt, payload) => {
       stdout: prep.installOut || '',
       stderr: `의존성 설치 실패\n${prep.checkErr || ''}\n${prep.installErr || ''}`,
     }
+  }
+
+  const jpegCount = countJpegFiles(payload.inputDir)
+  if (jpegCount <= 0) {
+    evt.sender.send('analyze-progress', { current: 0, total: 0, running: false })
+    return { ok: false, code: 'NO_FILES', stdout: '', stderr: '파일 없음.' }
   }
 
   const tempOut = path.join(payload.outputDir, '.ktk_review_tmp')
@@ -84,10 +154,17 @@ ipcMain.handle('analyze-for-review', async (_evt, payload) => {
   args.push('--export-mode', 'report')
   args.push('--burst-window-sec', String(payload.burstWindowSec ?? 1.5))
 
-  const ran = await runProcess('python3', args, {
-    cwd: root,
-    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
-  })
+  evt.sender.send('analyze-progress', { current: 0, total: jpegCount, running: true })
+  const ran = await runProcessWithProgress(
+    'python3',
+    args,
+    {
+      cwd: root,
+      env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: root },
+    },
+    (p) => evt.sender.send('analyze-progress', { ...p, running: true })
+  )
+  evt.sender.send('analyze-progress', { current: 0, total: 0, running: false })
 
   if (ran.code !== 0) return { ok: false, code: ran.code, stdout: ran.stdout, stderr: ran.stderr }
 

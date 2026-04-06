@@ -17,7 +17,7 @@ from .config import (
     merge_config_overrides,
 )
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+IMAGE_EXTS = {".jpg", ".jpeg"}
 
 
 def _iter_images(input_dir: Path):
@@ -250,7 +250,8 @@ def run_command(args):
 
     items: List[Dict] = []
     images = list(_iter_images(input_dir))
-    for p in images:
+    total_images = len(images)
+    for idx, p in enumerate(images, start=1):
         capture_ts, capture_ts_source = _extract_capture_ts(p)
         image = _load_image(p)
         if image is None:
@@ -265,6 +266,7 @@ def run_command(args):
                     "capture_ts_source": capture_ts_source,
                 }
             )
+            print(f"KTK_PROGRESS {idx}/{total_images}", flush=True)
             continue
 
         reject_reasons: List[str] = []
@@ -307,6 +309,7 @@ def run_command(args):
                 "capture_ts_source": capture_ts_source,
             }
         )
+        print(f"KTK_PROGRESS {idx}/{total_images}", flush=True)
 
     # duplicate는 버스트 그룹 단위로 대표컷(품질 우선) 1장만 남기고 나머지를 reject 처리
     if rules.duplicate:

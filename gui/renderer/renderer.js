@@ -23,6 +23,7 @@ let reviewSort = 'score_desc'
 let reviewMinScore = 0
 let viewMode = 'large'
 let activeFile = ''
+let analyzeProgress = { running: false, current: 0, total: 0 }
 
 const defaultPresets = {
   conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, burstLevel: 1 },
@@ -146,6 +147,21 @@ function recomputeDecisionsByStrength() {
   for (const item of modalItems) {
     const total = itemScore(item)
     item.decision = total > reviewMinScore ? 'reject' : 'approve'
+  }
+}
+
+function setAnalyzeProgress(running, current = 0, total = 0) {
+  analyzeProgress = { running: !!running, current: Number(current || 0), total: Number(total || 0) }
+  const el = $('detailProgress')
+  if (!el) return
+  if (!analyzeProgress.running) {
+    el.textContent = analyzeProgress.total > 0 ? `완료 (${analyzeProgress.total}/${analyzeProgress.total})` : '대기'
+    return
+  }
+  if (analyzeProgress.total > 0) {
+    el.textContent = `분석중 (${analyzeProgress.current}/${analyzeProgress.total})`
+  } else {
+    el.textContent = '분석중 (0/?)'
   }
 }
 
@@ -373,6 +389,15 @@ $('settingsModal').addEventListener('click', (e) => {
   if (e.target.id === 'settingsModal') closeSettings()
 })
 
+if (window.ktk?.onAnalyzeProgress) {
+  window.ktk.onAnalyzeProgress((p) => {
+    const running = !!p?.running
+    const current = Number(p?.current || 0)
+    const total = Number(p?.total || 0)
+    setAnalyzeProgress(running, current, total)
+  })
+}
+
 $('presetSelect').addEventListener('change', () => {
   const presets = loadPresets()
   applyLevelSet(presets[$('presetSelect').value] || presets.balanced)
@@ -473,17 +498,25 @@ $('runBtn').addEventListener('click', async () => {
 
   $('runBtn').disabled = true
   $('log').textContent = '분석 중... (report mode)'
+  setAnalyzeProgress(true, 0, 0)
   persistRecent()
 
   const analyzed = await window.ktk.analyzeForReview(s)
   $('runBtn').disabled = false
 
   if (!analyzed.ok) {
+    setAnalyzeProgress(false, 0, 0)
+    if (String(analyzed.code) === 'NO_FILES') {
+      window.alert('파일 없음.')
+      $('log').textContent = '파일 없음. (jpg/jpeg 파일을 확인해 주세요)'
+      return
+    }
     $('log').textContent = `[exit=${analyzed.code}] 실패\n${analyzed.stderr || analyzed.stdout || ''}`
     return
   }
 
   const rows = analyzed.rows || []
+  setAnalyzeProgress(false, rows.length, rows.length)
   const compromise = Number(s.compromise || 0)
   const items = rows.map((r) => {
     const it = { ...r, _levels: s.levels }
