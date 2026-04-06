@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id)
 
-const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup', 'compromise', 'burstLevel']
+const ids = ['eyes', 'focus', 'blur', 'exposure', 'dup', 'burstLevel']
 for (const id of ids) {
   const el = $(id)
   const out = $(`${id}Val`)
@@ -25,9 +25,9 @@ let viewMode = 'large'
 let activeFile = ''
 
 const defaultPresets = {
-  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, compromise: 0, burstLevel: 1 },
-  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1, compromise: 0, burstLevel: 2 },
-  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2, compromise: 0, burstLevel: 3 },
+  conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, burstLevel: 1 },
+  balanced: { eyes: 2, focus: 2, blur: 1, exposure: 1, dup: 1, burstLevel: 2 },
+  aggressive: { eyes: 3, focus: 3, blur: 2, exposure: 2, dup: 2, burstLevel: 3 },
 }
 
 function burstLevelToSec(level) {
@@ -60,7 +60,6 @@ function applyLevelSet(levels) {
     blur: levels.blur ?? levels.motion_blur ?? 1,
     exposure: levels.exposure ?? levels.exposure_bad ?? 1,
     dup: levels.dup ?? levels.duplicate ?? 1,
-    compromise: levels.compromise ?? 0,
   }
   for (const [k, v] of Object.entries(map)) {
     $(k).value = String(v)
@@ -75,7 +74,7 @@ function getSettingFromUI() {
     outputDir: $('outputDir').value.trim(),
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
-    compromise: Number($('compromise').value),
+    compromise: 0,
     burstLevel,
     burstWindowSec: burstLevelToSec(burstLevel),
     levels: {
@@ -105,8 +104,8 @@ function restoreRecent() {
       const radio = document.querySelector(`input[name="exportMode"][value="${v.exportMode}"]`)
       if (radio) radio.checked = true
     }
-    if (v.levels || typeof v.compromise !== 'undefined' || typeof v.burstLevel !== 'undefined') {
-      applyLevelSet({ ...(v.levels || {}), compromise: v.compromise ?? 0, burstLevel: v.burstLevel ?? 2 })
+    if (v.levels || typeof v.burstLevel !== 'undefined') {
+      applyLevelSet({ ...(v.levels || {}), burstLevel: v.burstLevel ?? 2 })
     }
   } catch {}
 }
@@ -202,7 +201,7 @@ function applyViewMode() {
 function refreshModalSummary() {
   const rejectCnt = modalItems.filter((x) => x.decision === 'reject').length
   const visible = getDisplayedItems().length
-  $('modalSummary').textContent = `${modalItems.length}건 (거절 ${rejectCnt}, 표시 ${visible}, score≥${reviewMinScore})`
+  $('modalSummary').textContent = `${modalItems.length}건 (거절 ${rejectCnt}, 표시 ${visible}, 강도≥${reviewMinScore})`
 }
 
 function getDisplayedItems() {
@@ -259,7 +258,7 @@ function moveActiveBy(direction) {
 
 function makeReviewCard(item) {
   const card = document.createElement('div')
-  card.className = 'reviewCard'
+  card.className = `reviewCard decision-${item.decision || 'none'}`
   if (item.file === activeFile) card.classList.add('active-card')
 
   const img = document.createElement('img')
@@ -373,7 +372,6 @@ $('savePreset').addEventListener('click', () => {
     blur: Number($('blur').value),
     exposure: Number($('exposure').value),
     dup: Number($('dup').value),
-    compromise: Number($('compromise').value),
   }
   savePresets(presets)
   $('log').textContent = '프리셋 저장 완료'

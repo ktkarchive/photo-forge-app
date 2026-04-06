@@ -158,7 +158,9 @@ body {
 .reviewGrid.view-small { grid-template-columns: repeat(8, minmax(0, 1fr)); }
 .reviewGrid.view-list { grid-template-columns: 1fr; }
 .reviewCard { border: 1px solid #3b3b3b; border-radius: 8px; background: #262626; padding: 8px; }
-.reviewCard.active-card { border-color: #0f62fe; box-shadow: 0 0 0 1px #0f62fe inset; }
+.reviewCard.decision-approve { border-color: #24a148; }
+.reviewCard.decision-reject { border-color: #da1e28; }
+.reviewCard.active-card { box-shadow: 0 0 0 1px #0f62fe inset; }
 .thumb { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #4d4d4d; cursor: pointer; }
 .reviewGrid.view-small .reviewCard { padding: 4px; border-radius: 6px; }
 .reviewGrid.view-small .thumb { height: 56px; border-radius: 4px; }
