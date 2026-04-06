@@ -142,6 +142,13 @@ function itemScore(item) {
   return sumScore(reasonScores(item))
 }
 
+function recomputeDecisionsByStrength() {
+  for (const item of modalItems) {
+    const total = itemScore(item)
+    item.decision = total > reviewMinScore ? 'reject' : 'approve'
+  }
+}
+
 function updateSelectionDetail(item) {
   if (!item) {
     $('detailName').textContent = '-'
@@ -208,7 +215,6 @@ function getDisplayedItems() {
   let items = [...modalItems]
   if (reviewFilter === 'approve') items = items.filter((x) => x.decision === 'approve')
   if (reviewFilter === 'reject') items = items.filter((x) => x.decision === 'reject')
-  items = items.filter((x) => itemScore(x) >= reviewMinScore)
 
   items.sort((a, b) => {
     const sa = itemScore(a)
@@ -331,6 +337,7 @@ function openReview(items) {
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
   $('viewMode').value = viewMode
   applyCycleFilterButton()
+  recomputeDecisionsByStrength()
   activeFile = items[0]?.file || ''
   $('emptyCenter').classList.add('hidden')
   $('reviewPanel').classList.remove('hidden')
@@ -403,6 +410,7 @@ $('reviewSort').addEventListener('change', () => {
 $('reviewMinScore').addEventListener('input', () => {
   reviewMinScore = Number($('reviewMinScore').value || 0)
   $('reviewMinScoreVal').textContent = String(reviewMinScore)
+  recomputeDecisionsByStrength()
   renderReviewGrid()
 })
 
