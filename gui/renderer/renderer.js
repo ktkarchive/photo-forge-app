@@ -24,6 +24,7 @@ let reviewMinScore = 0
 let viewMode = 'large'
 let activeFile = ''
 let analyzeProgress = { running: false, current: 0, total: 0 }
+let analyzeStartedAt = 0
 
 const defaultPresets = {
   conservative: { eyes: 1, focus: 1, blur: 1, exposure: 1, dup: 0, burstLevel: 1 },
@@ -151,7 +152,13 @@ function recomputeDecisionsByStrength() {
 }
 
 function setAnalyzeProgress(running, current = 0, total = 0) {
+  const now = Date.now()
+  const wasRunning = analyzeProgress.running
   analyzeProgress = { running: !!running, current: Number(current || 0), total: Number(total || 0) }
+
+  if (analyzeProgress.running && !wasRunning) analyzeStartedAt = now
+  if (!analyzeProgress.running) analyzeStartedAt = 0
+
   const el = $('detailProgress')
   if (!el) return
   if (!analyzeProgress.running) {
@@ -159,7 +166,14 @@ function setAnalyzeProgress(running, current = 0, total = 0) {
     return
   }
   if (analyzeProgress.total > 0) {
-    el.textContent = `분석중 (${analyzeProgress.current}/${analyzeProgress.total})`
+    let etaTxt = ''
+    if (analyzeStartedAt > 0 && analyzeProgress.current > 0) {
+      const elapsedSec = Math.max(1, Math.round((now - analyzeStartedAt) / 1000))
+      const perItem = elapsedSec / analyzeProgress.current
+      const remaining = Math.max(0, Math.round((analyzeProgress.total - analyzeProgress.current) * perItem))
+      etaTxt = `, 약 ${remaining}s 남음`
+    }
+    el.textContent = `분석중 (${analyzeProgress.current}/${analyzeProgress.total}${etaTxt})`
   } else {
     el.textContent = '분석중 (0/?)'
   }
