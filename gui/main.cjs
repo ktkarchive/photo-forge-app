@@ -322,6 +322,7 @@ for _, v in reason_priority:
 (output_dir / 'Rejected' / 'manual').mkdir(parents=True, exist_ok=True)
 
 copied = moved = skipped = sidecars = 0
+ops = []
 for it in items:
   src = pathlib.Path(it.get('file', ''))
   if not src.exists():
@@ -344,8 +345,10 @@ for it in items:
 
   if mode == 'move':
     shutil.move(str(src), str(dst2)); moved += 1
+    ops.append({'op':'move', 'src': str(src), 'dst': str(dst2)})
   else:
     shutil.copy2(str(src), str(dst2)); copied += 1
+    ops.append({'op':'copy', 'src': str(src), 'dst': str(dst2)})
 
   if include_sidecars:
     for s in iter_sidecars(src):
@@ -356,9 +359,16 @@ for it in items:
         continue
       if mode == 'move':
         shutil.move(str(s), str(sdst2))
+        ops.append({'op':'move', 'src': str(s), 'dst': str(sdst2)})
       else:
         shutil.copy2(str(s), str(sdst2))
+        ops.append({'op':'copy', 'src': str(s), 'dst': str(sdst2)})
       sidecars += 1
+
+manifest_path = output_dir / 'review_apply_manifest.jsonl'
+with manifest_path.open('a', encoding='utf-8') as mf:
+  for op in ops:
+    mf.write(json.dumps(op, ensure_ascii=False) + '\\n')
 
 summary = {
   'mode': mode,
@@ -369,6 +379,8 @@ summary = {
   'sidecars': sidecars,
   'skipped': skipped,
   'total': len(items),
+  'manifest_path': str(manifest_path),
+  'operations_logged': len(ops),
 }
 (output_dir / 'review_apply_summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
 print(json.dumps(summary, ensure_ascii=False))
