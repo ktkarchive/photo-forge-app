@@ -73,7 +73,7 @@ def _threshold_focus(level: int) -> float:
 
 def _threshold_blur(level: int) -> float:
     # 완화된 블러 컷오프 (실사용 과거절 완화)
-    return {1: 10.0, 2: 30.0, 3: 50.0}.get(level, 30.0)
+    return {1: 30.0, 2: 50.0, 3: 0.0}.get(level, 50.0)
 
 
 def _threshold_exposure(level: int) -> Tuple[float, float]:
