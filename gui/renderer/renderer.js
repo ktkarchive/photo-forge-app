@@ -651,7 +651,11 @@ function reasonChips(item, scores, totalScore) {
     ? `<button type="button" class="chip dup-group" data-group-id="${item._dupGroupId || ''}" title="중복/연사 그룹">중복 ${item._dupGroupSize}</button>`
     : ''
 
-  return `${scoreBox}${issueTags}${dupTag}`
+  const repTag = item?._dupGroupSize > 1 && item?._dupGroupRep
+    ? `<span class="chip dup-rep" title="중복 그룹 대표 이미지">대표</span>`
+    : ''
+
+  return `${scoreBox}${issueTags}${dupTag}${repTag}`
 }
 
 function applyCycleFilterButton() {

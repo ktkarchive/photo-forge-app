@@ -382,6 +382,12 @@ body {
   outline: none;
   box-shadow: none;
 }
+.chip.dup-rep {
+  background: #005d5d;
+  border-color: #007d79;
+  color: #d8fffb;
+  font-weight: 700;
+}
 .chip.issue {
   color: #ffffff;
 }
