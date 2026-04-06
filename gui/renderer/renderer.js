@@ -141,6 +141,7 @@ function getSettingFromUI() {
     outputDir: $('outputDir').value.trim(),
     conflictPolicy: $('conflictPolicy').value,
     exportMode: document.querySelector('input[name="exportMode"]:checked')?.value || 'copy',
+    includeSidecars: Boolean($('includeSidecars')?.checked),
     compromise: 0,
     burstWindowSec: duplicateLevelToBurstSec(dupLevel),
     levels: {
@@ -169,6 +170,9 @@ function restoreRecent() {
     if (v.exportMode) {
       const radio = document.querySelector(`input[name="exportMode"][value="${v.exportMode}"]`)
       if (radio) radio.checked = true
+    }
+    if (typeof v.includeSidecars === 'boolean' && $('includeSidecars')) {
+      $('includeSidecars').checked = v.includeSidecars
     }
     if (v.levels) {
       applyLevelSet({ ...(v.levels || {}) })
@@ -936,7 +940,7 @@ $('cancelReview').addEventListener('click', () => {
 $('confirmReview').addEventListener('click', async () => {
   const s = getSettingFromUI()
   if (s.exportMode === 'move') {
-    const ok = window.confirm('move mode는 원본을 이동합니다. 최종 확인하시겠습니까?')
+    const ok = window.confirm('move mode는 거절본만 Rejected로 이동합니다. 승인본은 원위치 유지됩니다. 진행할까요?')
     if (!ok) return
   }
 
@@ -944,6 +948,7 @@ $('confirmReview').addEventListener('click', async () => {
     outputDir: s.outputDir,
     exportMode: s.exportMode,
     conflictPolicy: s.conflictPolicy,
+    includeSidecars: s.includeSidecars,
     items: modalItems,
   })
 
@@ -999,6 +1004,7 @@ $('runBtn').addEventListener('click', async () => {
 })
 
 $('conflictPolicy').addEventListener('change', persistRecent)
+if ($('includeSidecars')) $('includeSidecars').addEventListener('change', persistRecent)
 document.querySelectorAll('input[name="exportMode"]').forEach((r) => r.addEventListener('change', persistRecent))
 
 document.addEventListener('keydown', (e) => {

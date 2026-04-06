@@ -20,8 +20,9 @@ from .config import (
 IMAGE_EXTS = {".jpg", ".jpeg"}
 
 
-def _iter_images(input_dir: Path):
-    for p in input_dir.rglob("*"):
+def _iter_images(input_dir: Path, recursive: bool = False):
+    entries = input_dir.rglob("*") if recursive else input_dir.iterdir()
+    for p in entries:
         if p.is_file() and p.suffix.lower() in IMAGE_EXTS:
             yield p
 
@@ -85,22 +86,23 @@ def _within_burst_window(item: Dict, rep_item: Dict, window_sec: float) -> bool:
 
 
 REJECT_REASON_PRIORITY = [
-    ("eyes_closed", "눈감"),
-    ("out_of_focus_subject", "초점"),
-    ("focus_unavailable", "초점"),
-    ("motion_blur", "블러"),
-    ("exposure_bad", "노출"),
-    ("duplicate_exact:", "중복"),
-    ("duplicate:", "중복"),
+    ("eyes_closed", "eyes_closed"),
+    ("out_of_focus_subject", "out_of_focus_subject"),
+    ("focus_unavailable", "out_of_focus_subject"),
+    ("motion_blur", "motion_blur"),
+    ("exposure_bad", "exposure_bad"),
+    ("duplicate_exact:", "duplicate_exact"),
+    ("duplicate:", "duplicate_near"),
 ]
 
 
-def _ensure_dirs(output_dir: Path):
-    (output_dir / "keep").mkdir(parents=True, exist_ok=True)
-    (output_dir / "reject").mkdir(parents=True, exist_ok=True)
-    (output_dir / "review").mkdir(parents=True, exist_ok=True)
+def _ensure_dirs(output_dir: Path, export_mode: str):
+    if export_mode == "copy":
+        (output_dir / "Approved").mkdir(parents=True, exist_ok=True)
+    (output_dir / "Rejected").mkdir(parents=True, exist_ok=True)
     for _key, label in REJECT_REASON_PRIORITY:
-        (output_dir / "reject" / label).mkdir(parents=True, exist_ok=True)
+        (output_dir / "Rejected" / label).mkdir(parents=True, exist_ok=True)
+    (output_dir / "Rejected" / "manual").mkdir(parents=True, exist_ok=True)
 
 
 def _resolve_export_mode(args) -> str:
@@ -121,7 +123,7 @@ def _reject_bucket_label(reject_reasons: List[str]) -> str:
     for key, label in REJECT_REASON_PRIORITY:
         if key in text:
             return label
-    return ""
+    return "manual"
 
 
 def _resolve_target_path(target: Path, conflict_policy: str) -> Path | None:
@@ -142,6 +144,21 @@ def _resolve_target_path(target: Path, conflict_policy: str) -> Path | None:
         if not cand.exists():
             return cand
         i += 1
+
+
+SIDECAR_EXTS = {".xmp", ".json", ".aae", ".raf", ".cr2", ".cr3", ".nef", ".arw", ".dng", ".rw2", ".orf"}
+
+
+def _iter_sidecars(src: Path):
+    parent = src.parent
+    stem = src.stem
+    for cand in parent.iterdir():
+        if not cand.is_file() or cand == src:
+            continue
+        if cand.stem != stem:
+            continue
+        if cand.suffix.lower() in SIDECAR_EXTS:
+            yield cand
 
 
 def _apply_check(result, reject_reasons: List[str], review_reasons: List[str]):
@@ -242,14 +259,14 @@ def run_command(args):
         raise SystemExit("move mode는 안전을 위해 --confirm-move 옵션이 필요합니다.")
 
     if export_mode != "report":
-        _ensure_dirs(output_dir)
+        _ensure_dirs(output_dir, export_mode)
 
     rows = []
     ai_calls_used = 0
     file_conflict_skipped = 0
 
     items: List[Dict] = []
-    images = list(_iter_images(input_dir))
+    images = list(_iter_images(input_dir, recursive=getattr(args, "recursive", False)))
     total_images = len(images)
     for idx, p in enumerate(images, start=1):
         capture_ts, capture_ts_source = _extract_capture_ts(p)
@@ -418,22 +435,43 @@ def run_command(args):
         )
 
         if export_mode != "report":
-            if klass == "reject":
-                reject_bucket = _reject_bucket_label(reject_reasons)
-                if reject_bucket:
-                    target = output_dir / "reject" / reject_bucket / p.name
+            if export_mode == "copy":
+                if klass == "reject":
+                    target = output_dir / "Rejected" / _reject_bucket_label(reject_reasons) / p.name
                 else:
-                    target = output_dir / "reject" / p.name
-            else:
-                target = output_dir / klass / p.name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            resolved_target = _resolve_target_path(target, args.conflict_policy)
-            if resolved_target is None:
-                file_conflict_skipped += 1
+                    target = output_dir / "Approved" / p.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                resolved_target = _resolve_target_path(target, args.conflict_policy)
+                if resolved_target is None:
+                    file_conflict_skipped += 1
+                else:
+                    shutil.copy2(str(p), str(resolved_target))
+                    if getattr(args, "include_sidecars", False):
+                        for sidecar in _iter_sidecars(p):
+                            s_target = resolved_target.with_suffix(sidecar.suffix)
+                            s_resolved = _resolve_target_path(s_target, args.conflict_policy)
+                            if s_resolved is None:
+                                file_conflict_skipped += 1
+                            else:
+                                shutil.copy2(str(sidecar), str(s_resolved))
             elif export_mode == "move":
-                shutil.move(str(p), str(resolved_target))
-            else:
-                shutil.copy2(str(p), str(resolved_target))
+                if klass != "reject":
+                    continue
+                target = output_dir / "Rejected" / _reject_bucket_label(reject_reasons) / p.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                resolved_target = _resolve_target_path(target, args.conflict_policy)
+                if resolved_target is None:
+                    file_conflict_skipped += 1
+                else:
+                    shutil.move(str(p), str(resolved_target))
+                    if getattr(args, "include_sidecars", False):
+                        for sidecar in _iter_sidecars(p):
+                            s_target = resolved_target.with_suffix(sidecar.suffix)
+                            s_resolved = _resolve_target_path(s_target, args.conflict_policy)
+                            if s_resolved is None:
+                                file_conflict_skipped += 1
+                            else:
+                                shutil.move(str(sidecar), str(s_resolved))
 
     result_csv = output_dir / "result.csv"
     with result_csv.open("w", newline="", encoding="utf-8") as f:
@@ -460,6 +498,7 @@ def run_command(args):
         "output": str(output_dir),
         "export_mode": export_mode,
         "report_mode": export_mode == "report",
+        "recursive_input_scan": bool(getattr(args, "recursive", False)),
         "rule_levels": rule_levels,
         "burst_window_sec": float(getattr(args, "burst_window_sec", 1.5)),
         "exif_timestamp_used": exif_ts_used,
@@ -477,6 +516,7 @@ def run_command(args):
             "ai_calls_used": ai_calls_used,
         },
         "file_conflict_policy": args.conflict_policy,
+        "include_sidecars": bool(getattr(args, "include_sidecars", False)),
         "file_conflict_skipped": file_conflict_skipped,
     }
     summary_json = output_dir / "summary.json"
@@ -589,6 +629,8 @@ def build_parser():
     run.add_argument("--export-mode", choices=["report", "copy", "move"], default="copy", help="출력 모드: report(리포트만), copy(복사), move(이동)")
     run.add_argument("--burst-window-sec", type=float, default=1.5, help="EXIF 촬영시각 기준 버스트 묶음 윈도우(초)")
     run.add_argument("--conflict-policy", choices=["rename", "skip", "overwrite"], default="rename", help="동일 파일명 충돌 처리")
+    run.add_argument("--include-sidecars", action="store_true", help="동일 stem의 sidecar/RAW 파일(XMP, CR2 등)도 함께 복사/이동")
+    run.add_argument("--recursive", action="store_true", help="입력 폴더 하위 폴더까지 재귀 탐색(기본: 지정 폴더만)")
     run.add_argument("--confirm-move", action="store_true", help="move 모드 실행 확인")
     run.add_argument("--dry-run", action="store_true", help="[호환] report 모드와 동일")
     run.add_argument("--move", action="store_true", help="[호환] move 모드와 동일")

@@ -151,8 +151,9 @@
           <button id="closeSettings" class="ghost">닫기</button>
         </div>
         <div class="settingsBody">
-          <label class="radioRow"><input name="exportMode" type="radio" value="copy" checked /> copy mode(원본 유지 + 출력 폴더 복사)</label>
-          <label class="radioRow"><input name="exportMode" type="radio" value="move" /> move mode(원본 이동)</label>
+          <label class="radioRow"><input name="exportMode" type="radio" value="copy" checked /> copy mode(Approved/Rejected 폴더로 복사)</label>
+          <label class="radioRow"><input name="exportMode" type="radio" value="move" /> move mode(승인본 원위치, Rejected만 이동)</label>
+          <label class="radioRow"><input id="includeSidecars" type="checkbox" /> sidecar/RAW 동반 처리(XMP, CR2 등)</label>
           <label>파일명 충돌 정책</label>
           <select id="conflictPolicy">
             <option value="rename" selected>rename (자동 번호)</option>

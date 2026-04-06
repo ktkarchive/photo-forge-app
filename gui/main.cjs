@@ -133,24 +133,18 @@ async function runStartupWarmup(root, notify = null) {
 
 function countJpegFiles(inputDir) {
   if (!inputDir) return 0
-  const stack = [inputDir]
+  let entries = []
+  try {
+    entries = fs.readdirSync(inputDir, { withFileTypes: true })
+  } catch {
+    return 0
+  }
+
   let count = 0
-  while (stack.length > 0) {
-    const cur = stack.pop()
-    let entries = []
-    try {
-      entries = fs.readdirSync(cur, { withFileTypes: true })
-    } catch {
-      continue
-    }
-    for (const ent of entries) {
-      const p = path.join(cur, ent.name)
-      if (ent.isDirectory()) stack.push(p)
-      else if (ent.isFile()) {
-        const ext = path.extname(ent.name).toLowerCase()
-        if (ext === '.jpg' || ext === '.jpeg') count += 1
-      }
-    }
+  for (const ent of entries) {
+    if (!ent.isFile()) continue
+    const ext = path.extname(ent.name).toLowerCase()
+    if (ext === '.jpg' || ext === '.jpeg') count += 1
   }
   return count
 }
@@ -269,23 +263,26 @@ output_dir = pathlib.Path(sys.argv[1])
 mode = sys.argv[2]
 conflict = sys.argv[3]
 items = json.loads(sys.argv[4])
+include_sidecars = str(sys.argv[5]).lower() in ('1', 'true', 'yes', 'on')
 
 reason_priority = [
-  ('eyes_closed', '눈감'),
-  ('out_of_focus_subject', '초점'),
-  ('focus_unavailable', '초점'),
-  ('motion_blur', '블러'),
-  ('exposure_bad', '노출'),
-  ('duplicate_exact:', '중복'),
-  ('duplicate:', '중복'),
+  ('eyes_closed', 'eyes_closed'),
+  ('out_of_focus_subject', 'out_of_focus_subject'),
+  ('focus_unavailable', 'out_of_focus_subject'),
+  ('motion_blur', 'motion_blur'),
+  ('exposure_bad', 'exposure_bad'),
+  ('duplicate_exact:', 'duplicate_exact'),
+  ('duplicate:', 'duplicate_near'),
 ]
+
+sidecar_exts = {'.xmp', '.json', '.aae', '.raf', '.cr2', '.cr3', '.nef', '.arw', '.dng', '.rw2', '.orf'}
 
 def bucket(reject_reasons: str):
   t = (reject_reasons or '')
   for k, v in reason_priority:
     if k in t:
       return v
-  return '수동'
+  return 'manual'
 
 def resolve_target(target: pathlib.Path):
   if not target.exists():
@@ -302,22 +299,36 @@ def resolve_target(target: pathlib.Path):
       return cand
     i += 1
 
-(output_dir / 'approve').mkdir(parents=True, exist_ok=True)
-(output_dir / 'reject').mkdir(parents=True, exist_ok=True)
-for _, v in reason_priority:
-  (output_dir / 'reject' / v).mkdir(parents=True, exist_ok=True)
-(output_dir / 'reject' / '수동').mkdir(parents=True, exist_ok=True)
+def iter_sidecars(src: pathlib.Path):
+  for cand in src.parent.iterdir():
+    if not cand.is_file() or cand == src:
+      continue
+    if cand.stem != src.stem:
+      continue
+    if cand.suffix.lower() in sidecar_exts:
+      yield cand
 
-copied = moved = skipped = 0
+if mode == 'copy':
+  (output_dir / 'Approved').mkdir(parents=True, exist_ok=True)
+(output_dir / 'Rejected').mkdir(parents=True, exist_ok=True)
+for _, v in reason_priority:
+  (output_dir / 'Rejected' / v).mkdir(parents=True, exist_ok=True)
+(output_dir / 'Rejected' / 'manual').mkdir(parents=True, exist_ok=True)
+
+copied = moved = skipped = sidecars = 0
 for it in items:
   src = pathlib.Path(it.get('file', ''))
   if not src.exists():
     continue
   decision = it.get('decision', 'approve')
+
   if decision == 'reject':
-    dst = output_dir / 'reject' / bucket(it.get('reject_reasons', '')) / src.name
+    dst = output_dir / 'Rejected' / bucket(it.get('reject_reasons', '')) / src.name
   else:
-    dst = output_dir / 'approve' / src.name
+    if mode == 'move':
+      # move mode: approve는 원위치 유지
+      continue
+    dst = output_dir / 'Approved' / src.name
 
   dst.parent.mkdir(parents=True, exist_ok=True)
   dst2 = resolve_target(dst)
@@ -330,11 +341,26 @@ for it in items:
   else:
     shutil.copy2(str(src), str(dst2)); copied += 1
 
+  if include_sidecars:
+    for s in iter_sidecars(src):
+      sdst = dst2.with_suffix(s.suffix)
+      sdst2 = resolve_target(sdst)
+      if sdst2 is None:
+        skipped += 1
+        continue
+      if mode == 'move':
+        shutil.move(str(s), str(sdst2))
+      else:
+        shutil.copy2(str(s), str(sdst2))
+      sidecars += 1
+
 summary = {
   'mode': mode,
   'conflict_policy': conflict,
+  'include_sidecars': include_sidecars,
   'copied': copied,
   'moved': moved,
+  'sidecars': sidecars,
   'skipped': skipped,
   'total': len(items),
 }
@@ -342,7 +368,7 @@ summary = {
 print(json.dumps(summary, ensure_ascii=False))
 `
 
-  const res = await runProcess('python3', ['-c', py, payload.outputDir, payload.exportMode, payload.conflictPolicy, JSON.stringify(payload.items || [])], {
+  const res = await runProcess('python3', ['-c', py, payload.outputDir, payload.exportMode, payload.conflictPolicy, JSON.stringify(payload.items || []), String(Boolean(payload.includeSidecars))], {
     cwd: root,
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   })
