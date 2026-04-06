@@ -500,22 +500,33 @@ body {
 }
 
 .previewCard {
-  width: min(1120px, 96vw);
+  width: min(1240px, 97vw);
 }
 
 .previewBody {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .previewImageWrap {
-  min-height: 58vh;
-  max-height: 72vh;
-  background: #0f0f0f;
   border: 1px solid #303030;
   border-radius: 10px;
+  background: #0f0f0f;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.previewImageMat {
+  width: min(76vh, 100%);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  border: 1px solid #1f1f1f;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -523,9 +534,17 @@ body {
 }
 
 .previewImage {
-  width: 100%;
-  height: 100%;
+  max-width: calc(100% - 2px);
+  max-height: calc(100% - 2px);
+  width: auto;
+  height: auto;
   object-fit: contain;
+}
+
+.previewSide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .previewInfo {
@@ -555,8 +574,36 @@ body {
   font-weight: 500;
 }
 
-.previewFoot {
-  justify-content: space-between;
+.previewStatusBoxes {
+  border: 1px solid #303030;
+  border-radius: 10px;
+  background: #171717;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.previewStatusBox {
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 6px 4px;
+  text-align: center;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.previewStatusBox.lv0 { background: #24a148; border-color: #24a148; color: #08140b; }
+.previewStatusBox.lv1 { background: #f1c21b; border-color: #f1c21b; color: #1f1402; }
+.previewStatusBox.lv2 { background: #ff832b; border-color: #ff832b; color: #2a1100; }
+.previewStatusBox.lv3 { background: #da1e28; border-color: #da1e28; color: #fff1f1; }
+
+.previewNavRow,
+.previewDecisionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .smallMuted {

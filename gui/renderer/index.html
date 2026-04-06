@@ -188,22 +188,29 @@
         </div>
         <div class="previewBody">
           <div class="previewImageWrap">
-            <img id="previewImage" class="previewImage" alt="preview" />
+            <div class="previewImageMat">
+              <img id="previewImage" class="previewImage" alt="preview" />
+            </div>
           </div>
-          <div class="previewInfo">
-            <div class="kv"><span>파일명</span><b id="previewName">-</b></div>
-            <div class="kv"><span>경로</span><b id="previewPath">-</b></div>
-            <div class="kv"><span>필터</span><b id="previewFilter">-</b></div>
-            <div class="kv"><span>진행</span><b id="previewIndex">-</b></div>
-            <div class="kv"><span>점수합</span><b id="previewScore">-</b></div>
-            <div class="kv"><span>사유</span><b id="previewReason">-</b></div>
+          <div class="previewSide">
+            <div class="previewInfo">
+              <div class="kv"><span>파일명</span><b id="previewName">-</b></div>
+              <div class="kv"><span>경로</span><b id="previewPath">-</b></div>
+              <div class="kv"><span>필터</span><b id="previewFilter">-</b></div>
+              <div class="kv"><span>진행</span><b id="previewIndex">-</b></div>
+              <div class="kv"><span>점수합</span><b id="previewScore">-</b></div>
+              <div class="kv"><span>사유</span><b id="previewReason">-</b></div>
+            </div>
+            <div id="previewStatusBoxes" class="previewStatusBoxes"></div>
+            <div class="previewNavRow">
+              <button id="previewPrev" class="ghost">이전</button>
+              <button id="previewNext" class="ghost">다음</button>
+            </div>
+            <div class="previewDecisionRow">
+              <button id="previewApprove" class="ghost">승인</button>
+              <button id="previewReject" class="primary">제외</button>
+            </div>
           </div>
-        </div>
-        <div class="settingsFoot previewFoot">
-          <button id="previewPrev" class="ghost">이전</button>
-          <button id="previewNext" class="ghost">다음</button>
-          <button id="previewApprove" class="ghost">승인</button>
-          <button id="previewReject" class="primary">제외</button>
         </div>
       </div>
     </div>

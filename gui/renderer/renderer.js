@@ -632,14 +632,14 @@ function updateSelectionDetail(item) {
   $('detailReason').textContent = item.reject_reasons || item.review_reasons || '-'
 }
 
-function reasonChips(item, scores, totalScore) {
-  const levelClass = (v) => {
-    if (v >= 3) return 'lv3'
-    if (v >= 2) return 'lv2'
-    if (v >= 1) return 'lv1'
-    return 'lv0'
-  }
+function levelClass(v) {
+  if (v >= 3) return 'lv3'
+  if (v >= 2) return 'lv2'
+  if (v >= 1) return 'lv1'
+  return 'lv0'
+}
 
+function reasonChips(item, scores, totalScore) {
   const showOnlyIssues = viewMode === 'small'
   const scoreBox = showOnlyIssues ? '' : `<span class="chip total-score" title="종합 점수">${totalScore}</span>`
 
@@ -755,6 +755,21 @@ function currentFilterLabel() {
   return '모두'
 }
 
+function renderPreviewStatusBoxes(item) {
+  const box = $('previewStatusBoxes')
+  if (!box) return
+  if (!item) {
+    box.innerHTML = ''
+    return
+  }
+
+  const sc = reasonScores(item)
+  const labels = ['눈감', '초점', '블러', '노출', '중복']
+  box.innerHTML = labels
+    .map((label) => `<div class="previewStatusBox ${levelClass(sc[label] || 0)}">${label}</div>`)
+    .join('')
+}
+
 function updatePreviewPanel(item, displayed, index) {
   if (!item) return
   $('previewImage').src = `file://${item.file}`
@@ -764,6 +779,10 @@ function updatePreviewPanel(item, displayed, index) {
   $('previewIndex').textContent = `${index + 1}/${displayed.length}`
   $('previewScore').textContent = String(itemScore(item))
   $('previewReason').textContent = item.reject_reasons || item.review_reasons || '-'
+  renderPreviewStatusBoxes(item)
+
+  $('previewPrev').disabled = index <= 0
+  $('previewNext').disabled = index >= displayed.length - 1
 
   $('previewApprove').classList.toggle('primary', item.decision === 'approve')
   $('previewApprove').classList.toggle('ghost', item.decision !== 'approve')
