@@ -67,7 +67,7 @@ output/
 
 ## 알려진 제한 사항 (v0.1.0-beta1)
 
-- Apple Silicon(arm64) 전용 빌드 — Intel Mac(x86_64) 미지원
+- Apple Silicon(arm64) 전용 빌드
 - 미서명 빌드 — Gatekeeper 수동 허용 필요
 - JPEG 파일만 처리 (`.jpg` / `.jpeg`)
 - `mediapipe` 런타임 오류 시 눈 감음 필터가 `review` 처리로 fallback
