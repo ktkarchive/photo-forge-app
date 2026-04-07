@@ -311,13 +311,11 @@ function dynamicDupThreshold(item, rep, baseThreshold, windowSec) {
 
 function isLikelySceneShift(item, rep) {
   const expGap = Math.abs(getScoreNum(item, 'exposure_score') - getScoreNum(rep, 'exposure_score'))
-  const focusGap = Math.abs(getScoreNum(item, 'focus_delta') - getScoreNum(rep, 'focus_delta'))
   const blurA = getScoreNum(item, 'laplacian_var')
   const blurB = getScoreNum(rep, 'laplacian_var')
   const blurRatio = (Math.max(blurA, blurB) + 1) / (Math.min(blurA, blurB) + 1)
 
   if (expGap >= 70) return true
-  if (focusGap >= 70) return true
   if (blurRatio >= 4.2) return true
   return false
 }
